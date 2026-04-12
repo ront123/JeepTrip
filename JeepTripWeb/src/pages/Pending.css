@@ -1,0 +1,53 @@
+.pending-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2xl) var(--sp-xl);
+  background: linear-gradient(180deg, var(--charcoal) 0%, #1C1E16 100%);
+  position: relative;
+  min-height: 100%;
+}
+.pending-top-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--gold); }
+.pending-bottom-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--olive); }
+.pending-lang { position: absolute; top: 20px; right: var(--sp-lg); }
+
+.pending-badge {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 40px; margin-bottom: var(--sp-xl);
+  color: var(--mud); font-size: 12px; font-weight: 700;
+  font-family: var(--font-condensed); letter-spacing: 3px;
+}
+.pending-badge-dot { width: 6px; height: 6px; border-radius: 3px; background: var(--olive); }
+.pending-icon { font-size: 72px; margin-bottom: var(--sp-lg); }
+.pending-title {
+  font-family: var(--font-condensed); font-size: 36px; font-weight: 900;
+  color: var(--cream); text-align: center; white-space: pre-line;
+  margin-bottom: var(--sp-md);
+}
+.pending-title.rtl { text-align: right; }
+.pending-subtitle { font-size: 15px; color: var(--sand); text-align: center; line-height: 1.6; margin-bottom: var(--sp-2xl); }
+.pending-subtitle.rtl { text-align: right; }
+
+.pending-steps { width: 100%; display: flex; flex-direction: column; gap: var(--sp-md); margin-bottom: var(--sp-xl); }
+.pending-step {
+  display: flex; align-items: center; gap: var(--sp-md);
+  background: var(--charcoal-mid); border: 1px solid var(--charcoal-light);
+  border-radius: var(--r-md); padding: var(--sp-md);
+}
+.pending-step.rtl { flex-direction: row-reverse; text-align: right; }
+.pending-step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--olive);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cream); font-weight: 800; font-size: 14px; flex-shrink: 0;
+}
+.pending-step-text { font-size: 15px; color: var(--sand); }
+
+.pending-info-box {
+  background: rgba(200, 151, 58, 0.08);
+  border: 1px solid rgba(200, 151, 58, 0.25);
+  border-radius: var(--r-md); padding: var(--sp-md);
+  width: 100%;
+}
+.pending-info-text { font-size: 13px; color: var(--mud); line-height: 1.6; text-align: center; }
+.pending-info-text.rtl { text-align: right; }

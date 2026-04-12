@@ -1,0 +1,356 @@
+/* JeepTrip Web — Design Tokens & Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Barlow+Condensed:wght@600;700;800;900&display=swap');
+
+/* === CSS Variables (from theme.ts) === */
+:root {
+  /* Backgrounds */
+  --charcoal: #1A1A18;
+  --charcoal-mid: #252520;
+  --charcoal-light: #2E2E28;
+
+  /* Greens */
+  --olive: #4A5940;
+  --olive-mid: #5E7252;
+  --olive-light: #738C64;
+
+  /* Gold */
+  --gold: #C8973A;
+  --gold-light: #E0B060;
+  --sand: #D4B896;
+
+  /* Neutrals */
+  --mud: #8C7B6A;
+  --cream: #F0E6D2;
+  --white: #FAFAF5;
+
+  /* Danger */
+  --rust: #B84B2A;
+  --rust-light: #D4613A;
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 16px;
+  --sp-lg: 24px;
+  --sp-xl: 32px;
+  --sp-2xl: 48px;
+  --sp-3xl: 64px;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-full: 999px;
+
+  /* Typography */
+  --font-sans: 'Barlow', system-ui, sans-serif;
+  --font-condensed: 'Barlow Condensed', system-ui, sans-serif;
+}
+
+/* === Global Reset === */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  background: var(--charcoal);
+  color: var(--cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* === App Shell: centered mobile-width === */
+#root {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background: #0F0F0E;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 30px,
+      rgba(74,89,64,0.04) 30px,
+      rgba(74,89,64,0.04) 31px
+    );
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--charcoal);
+  position: relative;
+  box-shadow: 0 0 80px rgba(0,0,0,0.8);
+}
+
+/* === Utility === */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.w-full { width: 100%; }
+.gap-sm { gap: var(--sp-sm); }
+.gap-md { gap: var(--sp-md); }
+.gap-lg { gap: var(--sp-lg); }
+.overflow-hidden { overflow: hidden; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+
+/* === Common Components === */
+.gold-line {
+  height: 2px;
+  background: var(--gold);
+  margin: 0 var(--sp-lg);
+  border-radius: 1px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.screen-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 56px var(--sp-lg) var(--sp-md);
+  background: linear-gradient(180deg, var(--charcoal) 0%, var(--charcoal) 100%);
+  flex-shrink: 0;
+}
+.screen-header.rtl { flex-direction: row-reverse; }
+
+.header-sub {
+  font-family: var(--font-condensed);
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.header-title {
+  font-family: var(--font-condensed);
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--cream);
+  letter-spacing: 1px;
+}
+
+/* === Cards === */
+.card {
+  background: var(--charcoal-mid);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--charcoal-light);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+/* === Buttons === */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-sm);
+  padding: 14px var(--sp-lg);
+  border-radius: var(--r-md);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s ease;
+  text-decoration: none;
+  width: 100%;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-gold {
+  background: linear-gradient(135deg, var(--gold), #A07830);
+  color: var(--charcoal);
+}
+.btn-gold:hover:not(:disabled) { background: linear-gradient(135deg, var(--gold-light), var(--gold)); }
+
+.btn-olive {
+  background: var(--olive);
+  color: var(--cream);
+}
+.btn-olive:hover:not(:disabled) { background: var(--olive-mid); }
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--charcoal-light);
+  color: var(--sand);
+}
+.btn-outline:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+
+.btn-danger-outline {
+  background: transparent;
+  border: 1px solid var(--rust-light);
+  color: var(--rust-light);
+}
+
+/* === Inputs === */
+.input {
+  background: var(--charcoal);
+  border: 1px solid var(--charcoal-light);
+  border-radius: var(--r-md);
+  color: var(--cream);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  padding: 14px 16px;
+  width: 100%;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.input::placeholder { color: var(--mud); }
+.input:focus { border-color: var(--gold); }
+
+/* === Spinner === */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid rgba(200, 151, 58, 0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+.spinner-sm {
+  width: 16px; height: 16px;
+  border-width: 2px;
+}
+
+/* === Full-screen Center === */
+.center-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+/* === Slide-in animation === */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up { animation: slideUp 0.3s ease forwards; }
+
+/* === Modal Overlay === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--sp-xl);
+}
+.modal-box {
+  background: var(--charcoal-mid);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--charcoal-light);
+  padding: var(--sp-xl);
+  width: 100%;
+  max-width: 420px;
+}
+.modal-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--cream);
+  margin-bottom: 8px;
+}
+.modal-sub {
+  font-size: 14px;
+  color: var(--sand);
+  margin-bottom: var(--sp-lg);
+}
+
+/* === Scrollable content area === */
+.screen-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* === Tag/Pill === */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* === Gradient Text === */
+.text-gold { color: var(--gold); }
+.text-cream { color: var(--cream); }
+.text-sand { color: var(--sand); }
+.text-mud { color: var(--mud); }
+.text-rust { color: var(--rust-light); }
+.text-olive { color: var(--olive-light); }
+
+/* === Tab bar === */
+.tab-bar {
+  display: flex;
+  background: #111110;
+  border-top: 1px solid var(--charcoal-light);
+  flex-shrink: 0;
+}
+.tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px 14px;
+  gap: 4px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: color 0.2s;
+  color: var(--mud);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+}
+.tab-bar-item:hover { color: var(--gold); }
+.tab-bar-item.active { color: var(--gold); }
+.tab-bar-item .tab-icon { font-size: 20px; }
+
+/* === Section title === */
+.section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--cream);
+  margin-bottom: var(--sp-md);
+}
+
+/* === Avatar === */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--olive);
+  border-radius: 50%;
+  color: var(--cream);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* === Scrollbar hide === */
+.screen-content::-webkit-scrollbar { display: none; }
+.screen-content { -ms-overflow-style: none; scrollbar-width: none; }

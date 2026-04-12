@@ -1,0 +1,20 @@
+.lang-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(200, 151, 58, 0.08);
+  border: 1px solid rgba(200, 151, 58, 0.25);
+  border-radius: var(--r-full);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--mud);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.lang-toggle:hover { border-color: var(--gold); }
+.lang-toggle span.active { color: var(--gold); }
+.lang-toggle .divider { color: var(--charcoal-light); }
