@@ -140,6 +140,7 @@ html, body, #root {
   color: var(--cream);
   letter-spacing: 1px;
 }
+.rtl .header-sub, .rtl .header-title { text-align: right; }
 
 /* === Cards === */
 .card {
