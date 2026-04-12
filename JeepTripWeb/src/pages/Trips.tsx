@@ -96,7 +96,7 @@ export default function Trips() {
   };
 
   return (
-    <div className="trips-screen">
+    <div className="trips-screen screen-container">
       {/* Header */}
       <div className={`screen-header ${isRTL ? 'rtl' : ''}`}>
         <div>

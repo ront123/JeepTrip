@@ -1,7 +1,5 @@
 .admin-screen {
-  flex: 1; display: flex; flex-direction: column;
   background: linear-gradient(180deg, var(--charcoal) 0%, #1C1E16 100%);
-  min-height: 100%;
 }
 .admin-section-header { padding: var(--sp-lg) var(--sp-lg) var(--sp-sm); }
 .admin-list { padding: 0 var(--sp-md) var(--sp-3xl); display: flex; flex-direction: column; gap: var(--sp-md); }

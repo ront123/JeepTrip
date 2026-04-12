@@ -36,7 +36,7 @@ export default function Admin() {
   const row = isRTL ? 'row-reverse' : 'row';
 
   return (
-    <div className="admin-screen">
+    <div className="admin-screen screen-container">
       <div className={`screen-header ${rtl}`}>
         <div>
           <p className="header-sub">{t('admin_title')}</p>

@@ -44,7 +44,7 @@ export default function Profile() {
   const initial = profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'J';
 
   return (
-    <div className="profile-screen">
+    <div className="profile-screen screen-container">
       <div className={`screen-header ${rtl}`}>
         <div style={{ flex: 1 }}>
           <p className="header-sub">{isRTL ? 'נהג שטח' : 'OPERATOR'}</p>
