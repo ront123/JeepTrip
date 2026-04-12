@@ -56,15 +56,9 @@ export default function Profile() {
   return (
     <div className="profile-screen screen-container">
       <div className={`screen-header ${rtl}`}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1 }} className={isRTL ? 'text-right' : ''}>
           <p className="header-sub">{isRTL ? 'נהג שטח' : 'OPERATOR'}</p>
           <h1 className="header-title">{isRTL ? 'הפרופיל שלי' : 'Profile'}</h1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {!isEditing
-            ? <button className="edit-btn" onClick={() => setIsEditing(true)}>{isRTL ? 'עריכה' : 'Edit'}</button>
-            : <button className="edit-btn cancel" onClick={() => setIsEditing(false)}>{isRTL ? 'ביטול' : 'Cancel'}</button>
-          }
         </div>
       </div>
       <div className="gold-line" />
@@ -112,7 +106,25 @@ export default function Profile() {
             </>
           )}
 
-          <button className="btn btn-danger-outline" style={{ marginTop: 'var(--sp-2xl)' }} onClick={handleLogout}>
+          {!isEditing ? (
+            <button 
+              className="btn btn-outline" 
+              style={{ marginTop: 'var(--sp-lg)', borderColor: 'var(--gold)', color: 'var(--gold)' }} 
+              onClick={() => setIsEditing(true)}
+            >
+              {isRTL ? 'עריכה' : 'Edit'}
+            </button>
+          ) : (
+            <button 
+              className="btn btn-outline" 
+              style={{ marginTop: 'var(--sp-lg)' }} 
+              onClick={() => setIsEditing(false)}
+            >
+              {isRTL ? 'ביטול' : 'Cancel'}
+            </button>
+          )}
+
+          <button className="btn btn-danger-outline" style={{ marginTop: 'var(--sp-md)' }} onClick={handleLogout}>
             {isRTL ? 'התנתק מהמערכת' : 'Logout'}
           </button>
         </div>

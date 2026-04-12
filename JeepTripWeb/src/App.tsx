@@ -8,6 +8,7 @@ import Trips from './pages/Trips';
 import TripDashboard from './pages/TripDashboard';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import CreateTrip from './pages/CreateTrip';
 import JoinRoute from './pages/JoinRoute';
 
 function AppRoutes() {
@@ -61,6 +62,7 @@ function AppRoutes() {
         <Route path="/join/:token" element={<JoinRoute />} />
         <Route path="/trips" element={<Trips />} />
         <Route path="/trips/:id" element={<TripDashboard />} />
+        <Route path="/create-trip" element={<CreateTrip />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/login" element={<Navigate to="/trips" replace />} />

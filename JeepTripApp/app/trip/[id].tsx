@@ -34,7 +34,7 @@ import { TripSettingsModal } from '@/components/TripSettingsModal';
 import { supabase } from '@/lib/supabase';
 import { fetchTrip, Trip } from '@/lib/trips';
 import { fetchLogistics, addLogisticsItem, toggleItemCompletion, updateLogisticsItem, deleteLogisticsItem, saveLogisticsTemplate, fetchLogisticsTemplates, applyLogisticsTemplate, LogisticsTemplate, LogisticsItem } from '@/lib/logistics';
-import { fetchMessages, sendMessage, fetchPrivateMessages, sendPrivateMessage, ChatMessage, uploadMediaFile } from '@/lib/chat';
+import { fetchMessages, sendMessage, ChatMessage, uploadMediaFile } from '@/lib/chat';
 
 type TabType = 'overview' | 'navigation' | 'logistics' | 'chat';
 
@@ -135,17 +135,29 @@ export default function TripDashboardScreen() {
   const [userTemplates, setUserTemplates] = useState<LogisticsTemplate[]>([]);
   
   // Chat
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [weather, setWeather] = useState<{ temp: number; icon: string; desc: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [chatType, setChatType] = useState<'group' | 'private'>('group');
-  const [selectedRecipientId, setSelectedRecipientId] = useState<string | null>(null);
   const chatScrollRef = useRef<FlatList>(null);
 
+  // Helper to find name from trip attendees
+  const getSenderName = (senderId: string) => {
+    const attendee = trip?.trip_attendees?.find((a: any) => a.user_id === senderId);
+    return attendee?.users?.full_name || 'User';
+  };
+
+  const formatNewMessage = (msg: any) => {
+    if (msg.users) return msg; // Already formatted
+    return {
+      ...msg,
+      users: { full_name: getSenderName(msg.sender_id) }
+    };
+  };
+
+  // Initial Load (One-time)
   useEffect(() => {
     async function load() {
-      // Basic UUID format check
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(tripId)) {
         setLoading(false);
@@ -164,17 +176,19 @@ export default function TripDashboardScreen() {
 
         const msgs = await fetchMessages(tripId);
         setMessages(msgs);
-
       } catch (e) {
-        console.error(e);
+        console.error('Initial load error:', e);
       } finally {
         setLoading(false);
       }
     }
-    
     load();
+  }, [tripId]);
 
-    // Supabase Real-time Subscriptions
+  // Real-time Subscriptions
+  useEffect(() => {
+    if (!tripId) return;
+
     const logisticsSub = supabase
       .channel(`public:logistics_items:trip_id=eq.${tripId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_items', filter: `trip_id=eq.${tripId}` }, () => {
@@ -184,32 +198,22 @@ export default function TripDashboardScreen() {
 
     const chatSub = supabase
       .channel(`public:trip_messages:trip_id=eq.${tripId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, () => {
-        fetchMessages(tripId).then(setMessages);
-      })
-      .subscribe();
-
-    const privateChatSub = supabase
-      .channel(`public:private_messages`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'private_messages' }, () => {
-        if (selectedRecipientId) fetchPrivateMessages(selectedRecipientId).then(setMessages);
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, (payload) => {
+        const newMsg = formatNewMessage(payload.new);
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(logisticsSub);
       supabase.removeChannel(chatSub);
-      supabase.removeChannel(privateChatSub);
     };
-  }, [tripId, selectedRecipientId]);
+  }, [tripId, trip?.trip_attendees]);
 
-  useEffect(() => {
-    if (chatType === 'private' && selectedRecipientId) {
-      fetchPrivateMessages(selectedRecipientId).then(setMessages);
-    } else {
-      fetchMessages(tripId).then(setMessages);
-    }
-  }, [chatType, selectedRecipientId]);
+
 
   useEffect(() => {
     if (trip?.lat && trip?.lng) {
@@ -407,15 +411,11 @@ export default function TripDashboardScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() && !uploadingImage) return; // Prevent empty msg unless media
+    if (!newMessage.trim() && !uploadingImage) return;
+    const msgText = newMessage.trim();
+    setNewMessage('');
     try {
-      if (chatType === 'group') {
-        await sendMessage(tripId, newMessage.trim());
-      } else if (selectedRecipientId) {
-        await sendPrivateMessage(selectedRecipientId, newMessage.trim());
-      }
-      setNewMessage('');
-      fetchMessages(tripId).then(setMessages);
+      await sendMessage(tripId, msgText);
     } catch (e) { console.error(e); }
   };
 
@@ -437,13 +437,7 @@ export default function TripDashboardScreen() {
         setUploadingImage(true);
         const uploadedUrl = await uploadMediaFile(result.assets[0].uri, type);
         
-        if (chatType === 'group') {
-          await sendMessage(tripId, '', uploadedUrl, type);
-        } else if (selectedRecipientId) {
-          await sendPrivateMessage(selectedRecipientId, '', uploadedUrl, type);
-        }
-        
-        fetchMessages(tripId).then(setMessages);
+        await sendMessage(tripId, '', uploadedUrl, type);
       } catch (e: any) {
         Alert.alert('Error', e.message);
       } finally {
@@ -756,78 +750,50 @@ export default function TripDashboardScreen() {
   const renderChat = () => {
     return (
       <View style={{ flex: 1 }}>
-        <View style={[styles.chatTypeTabs, rowStyle]}>
-          <TouchableOpacity style={[styles.chatTypeTab, chatType === 'group' && styles.chatTypeTabActive]} onPress={() => setChatType('group')}>
-            <Text style={[styles.chatTypeText, chatType === 'group' && styles.chatTypeTextActive]}>{isRTL ? 'צאט קבוצתי' : 'Group Chat'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.chatTypeTab, chatType === 'private' && styles.chatTypeTabActive]} onPress={() => setChatType('private')}>
-            <Text style={[styles.chatTypeText, chatType === 'private' && styles.chatTypeTextActive]}>{isRTL ? 'צאט אישי' : 'Private Chat'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {chatType === 'private' && !selectedRecipientId ? (
-          <ScrollView style={{ flex: 1 }}>
-            <Text style={[styles.label, { padding: 15, color: Palette.gold }]}>{isRTL ? 'בחר חבר לצאט:' : 'Select member to chat:'}</Text>
-            {trip?.trip_attendees?.filter((a: any) => a.user_id !== userId).map((a: any) => (
-              <TouchableOpacity key={a.user_id} style={styles.memberRow} onPress={() => setSelectedRecipientId(a.user_id)}>
-                <View style={[rowStyle, { alignItems: 'center', gap: 12 }]}>
-                  <View style={styles.avatarMini}><Text style={{ color: Palette.charcoal, fontWeight: '800' }}>{a.users?.full_name?.charAt(0)}</Text></View>
-                  <Text style={{ color: Palette.cream, fontSize: 16 }}>{a.users?.full_name}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        ) : (
-          <>
-            {chatType === 'private' && (
-              <TouchableOpacity style={{ padding: 10, backgroundColor: Palette.charcoalMid }} onPress={() => setSelectedRecipientId(null)}>
-                <Text style={{ color: Palette.gold }}>← {isRTL ? 'חזרה לרשימה' : 'Back to members'}</Text>
-              </TouchableOpacity>
-            )}
-            <FlatList
-              data={messages}
-              keyExtractor={m => m.id}
-              renderItem={({ item }) => (
-                <ChatMessageItem 
-                  item={item} 
-                  userId={userId} 
-                  isRTL={isRTL} 
-                  handleDownloadMedia={handleDownloadMedia} 
-                />
-              )}
-              contentContainerStyle={styles.chatList}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              removeClippedSubviews={Platform.OS === 'android'}
-              inverted={false}
+        <FlatList
+          data={messages}
+          keyExtractor={m => m.id}
+          renderItem={({ item }) => (
+            <ChatMessageItem 
+              item={item} 
+              userId={userId} 
+              isRTL={isRTL} 
+              handleDownloadMedia={handleDownloadMedia} 
             />
-            {!trip?.is_archived ? (
-              <View style={[styles.inputRow, rowStyle]}>
-                <TouchableOpacity style={{ padding: 5 }} onPress={() => handlePickMedia('image')} disabled={uploadingImage}>
-                  <Text style={{ fontSize: 24, opacity: uploadingImage ? 0.5 : 1 }}>🖼️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{ padding: 5 }} onPress={() => handlePickMedia('video')} disabled={uploadingImage}>
-                  <Text style={{ fontSize: 24, opacity: uploadingImage ? 0.5 : 1 }}>📹</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.textInput, rtlText, { minHeight: 48, paddingTop: 12, paddingBottom: 12 }]}
-                  placeholder={t('chat_placeholder')}
-                  placeholderTextColor={Palette.mud}
-                  value={newMessage}
-                  onChangeText={setNewMessage}
-                  multiline
-                />
-                <TouchableOpacity style={styles.sendBtn} onPress={handleSendMessage}>
-                  <Text style={{ color: Palette.charcoal, fontWeight: '800' }}>➤</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.readOnlyChat}>
-                <Text style={styles.readOnlyText}>{isRTL ? 'הצאט נעול לקריאה בלבד' : 'Chat is locked (read-only)'}</Text>
-              </View>
-            )}
-          </>
+          )}
+          contentContainerStyle={styles.chatList}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+          ref={chatScrollRef}
+          windowSize={10}
+          removeClippedSubviews={Platform.OS === 'android'}
+        />
+        {!trip?.is_archived ? (
+          <View style={[styles.inputRow, rowStyle]}>
+            <TouchableOpacity style={{ padding: 5 }} onPress={() => handlePickMedia('image')} disabled={uploadingImage}>
+              <Text style={{ fontSize: 24, opacity: uploadingImage ? 0.5 : 1 }}>🖼️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ padding: 5 }} onPress={() => handlePickMedia('video')} disabled={uploadingImage}>
+              <Text style={{ fontSize: 24, opacity: uploadingImage ? 0.5 : 1 }}>📹</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={[styles.textInput, rtlText, { minHeight: 48, paddingTop: 12, paddingBottom: 12 }]}
+              placeholder={t('chat_placeholder')}
+              placeholderTextColor={Palette.mud}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              multiline
+            />
+            <TouchableOpacity style={styles.sendBtn} onPress={handleSendMessage}>
+              <Text style={{ color: Palette.charcoal, fontWeight: '800' }}>➤</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.readOnlyChat}>
+            <Text style={styles.readOnlyText}>{isRTL ? 'הצאט נעול לקריאה בלבד' : 'Chat is locked (read-only)'}</Text>
+          </View>
         )}
       </View>
     );

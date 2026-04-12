@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchTrip, upsertRSVP } from '../lib/trips';
 import { fetchLogistics, addLogisticsItem, deleteLogisticsItem, updateLogisticsItem, fetchLogisticsTemplates, saveLogisticsTemplate, applyLogisticsTemplate } from '../lib/logistics';
 import type { LogisticsItem, LogisticsTemplate } from '../lib/logistics';
-import { fetchMessages, sendMessage, uploadMediaFile, fetchPrivateMessages, sendPrivateMessage } from '../lib/chat';
+import { fetchMessages, sendMessage, uploadMediaFile } from '../lib/chat';
 import type { ChatMessage } from '../lib/chat';
 import { supabase } from '../lib/supabase';
 import './TripDashboard.css';
@@ -43,11 +43,22 @@ export default function TripDashboard() {
   // Chat
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
-  const [chatType, setChatType] = useState<'group' | 'private'>('group');
-  const [selectedRecipient, setSelectedRecipient] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getSenderName = (senderId: string) => {
+    const attendee = trip?.trip_attendees?.find((a: any) => a.user_id === senderId);
+    return attendee?.users?.full_name || 'User';
+  };
+
+  const formatNewMessage = (msg: any) => {
+    if (msg.users) return msg;
+    return {
+      ...msg,
+      users: { full_name: getSenderName(msg.sender_id) }
+    };
+  };
 
   // Invite modal
   const [showInvite, setShowInvite] = useState(false);
@@ -69,15 +80,11 @@ export default function TripDashboard() {
 
   const loadMessages = useCallback(async () => {
     if (!tripId) return;
-    if (chatType === 'private' && selectedRecipient) {
-      const msgs = await fetchPrivateMessages(selectedRecipient);
-      setMessages(msgs);
-    } else {
-      const msgs = await fetchMessages(tripId);
-      setMessages(msgs);
-    }
-  }, [tripId, chatType, selectedRecipient]);
+    const msgs = await fetchMessages(tripId);
+    setMessages(msgs);
+  }, [tripId]);
 
+  // Initial Load (One-time)
   useEffect(() => {
     async function init() {
       await loadTrip();
@@ -89,21 +96,32 @@ export default function TripDashboard() {
       setLoading(false);
     }
     init();
+  }, [tripId, loadTrip, loadLogistics]);
 
+  // Real-time Subscriptions
+  useEffect(() => {
     if (!tripId) return;
-    // Realtime subscriptions
+
     const logSub = supabase.channel(`logistics:${tripId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logistics_items', filter: `trip_id=eq.${tripId}` }, loadLogistics)
       .subscribe();
 
     const chatSub = supabase.channel(`chat:${tripId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, loadMessages)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, (payload) => {
+        const newMsgFormatted = formatNewMessage(payload.new);
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsgFormatted.id)) return prev;
+          return [...prev, newMsgFormatted];
+        });
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(logSub); supabase.removeChannel(chatSub); };
-  }, [tripId, loadTrip, loadLogistics, loadMessages]);
+    return () => { 
+      supabase.removeChannel(logSub); 
+      supabase.removeChannel(chatSub); 
+    };
+  }, [tripId, trip?.trip_attendees]);
 
-  useEffect(() => { loadMessages(); }, [chatType, selectedRecipient, loadMessages]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleRsvp = async (status: 'attending' | 'not_attending' | 'maybe') => {
@@ -132,10 +150,9 @@ export default function TripDashboard() {
 
   const handleSendMsg = async () => {
     if (!newMsg.trim() || !tripId) return;
-    if (chatType === 'group') await sendMessage(tripId, newMsg.trim());
-    else if (selectedRecipient) await sendPrivateMessage(selectedRecipient, newMsg.trim());
+    const msgText = newMsg.trim();
     setNewMsg('');
-    loadMessages();
+    await sendMessage(tripId, msgText);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,9 +162,7 @@ export default function TripDashboard() {
     try {
       setUploading(true);
       const url = await uploadMediaFile(file);
-      if (chatType === 'group') await sendMessage(tripId, '', url, type);
-      else if (selectedRecipient) await sendPrivateMessage(selectedRecipient, '', url, type);
-      loadMessages();
+      await sendMessage(tripId, '', url, type);
     } catch (e) { console.error(e); }
     finally { setUploading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
@@ -395,72 +410,44 @@ export default function TripDashboard() {
 
   const renderChat = () => (
     <div className="chat-screen">
-      <div className="chat-type-tabs" style={{ flexDirection: row as any }}>
-        <button className={`chat-type-tab ${chatType === 'group' ? 'active' : ''}`} onClick={() => { setChatType('group'); setSelectedRecipient(null); }}>
-          {isRTL ? 'צאט קבוצתי' : 'Group Chat'}
-        </button>
-        <button className={`chat-type-tab ${chatType === 'private' ? 'active' : ''}`} onClick={() => setChatType('private')}>
-          {isRTL ? 'צאט אישי' : 'Private Chat'}
-        </button>
+      <div className="chat-messages">
+        {messages.map(msg => {
+          const isMe = msg.sender_id === userId || (msg as any).user_id === userId;
+          const mediaUrl = msg.media_url || msg.image_url;
+          const isVideo = msg.media_type === 'video';
+          return (
+            <div key={msg.id} className={`msg-wrapper ${isMe ? 'me' : 'other'}`}>
+              {!isMe && <p className="msg-author">{msg.users?.full_name}</p>}
+              <div className={`msg-bubble ${isMe ? 'me' : 'other'}`}>
+                {mediaUrl && (
+                  isVideo
+                    ? <video src={mediaUrl} controls style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
+                    : <img src={mediaUrl} alt="media" style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
+                )}
+                {msg.content && <p className="msg-text">{msg.content}</p>}
+              </div>
+            </div>
+          );
+        })}
+        <div ref={chatEndRef} />
       </div>
 
-      {chatType === 'private' && !selectedRecipient ? (
-        <div className="chat-members-list">
-          <p style={{ color: 'var(--gold)', fontSize: 14, padding: '10px 16px' }}>{isRTL ? 'בחר חבר לצאט:' : 'Select member to chat:'}</p>
-          {trip.trip_attendees?.filter((a: any) => a.user_id !== userId).map((a: any) => (
-            <div key={a.user_id} className="member-row" style={{ flexDirection: row as any }} onClick={() => setSelectedRecipient(a.user_id)}>
-              <div className="avatar" style={{ width: 36, height: 36, fontSize: 16 }}>{a.users?.full_name?.charAt(0)}</div>
-              <span style={{ color: 'var(--cream)', fontSize: 15 }}>{a.users?.full_name}</span>
-            </div>
-          ))}
+      {!trip.is_archived && (
+        <div className={`chat-input-row ${rtl}`}>
+          <input
+            className={`input ${rtl}`}
+            style={{ flex: 1 }}
+            placeholder={t('chat_placeholder')}
+            value={newMsg}
+            onChange={e => setNewMsg(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSendMsg()}
+          />
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+          <button className="send-btn" style={{ fontSize: 16 }} onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Upload media">
+            {uploading ? <span className="spinner spinner-sm" /> : '📎'}
+          </button>
+          <button className="send-btn" onClick={handleSendMsg} disabled={!newMsg.trim()}>➤</button>
         </div>
-      ) : (
-        <>
-          {chatType === 'private' && selectedRecipient && (
-            <button className="back-to-members" onClick={() => setSelectedRecipient(null)}>
-              ← {isRTL ? 'חזרה לרשימה' : 'Back to members'}
-            </button>
-          )}
-          <div className="chat-messages">
-            {messages.map(msg => {
-              const isMe = msg.sender_id === userId || (msg as any).user_id === userId;
-              const mediaUrl = msg.media_url || msg.image_url;
-              const isVideo = msg.media_type === 'video';
-              return (
-                <div key={msg.id} className={`msg-wrapper ${isMe ? 'me' : 'other'}`}>
-                  {!isMe && <p className="msg-author">{msg.users?.full_name}</p>}
-                  <div className={`msg-bubble ${isMe ? 'me' : 'other'}`}>
-                    {mediaUrl && (
-                      isVideo
-                        ? <video src={mediaUrl} controls style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
-                        : <img src={mediaUrl} alt="media" style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
-                    )}
-                    {msg.content && <p className="msg-text">{msg.content}</p>}
-                  </div>
-                </div>
-              );
-            })}
-            <div ref={chatEndRef} />
-          </div>
-
-          {!trip.is_archived && (
-            <div className={`chat-input-row ${rtl}`}>
-              <input
-                className={`input ${rtl}`}
-                style={{ flex: 1 }}
-                placeholder={t('chat_placeholder')}
-                value={newMsg}
-                onChange={e => setNewMsg(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSendMsg()}
-              />
-              <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFileUpload} />
-              <button className="send-btn" style={{ fontSize: 16 }} onClick={() => fileInputRef.current?.click()} disabled={uploading} title="Upload media">
-                {uploading ? <span className="spinner spinner-sm" /> : '📎'}
-              </button>
-              <button className="send-btn" onClick={handleSendMsg} disabled={!newMsg.trim()}>➤</button>
-            </div>
-          )}
-        </>
       )}
     </div>
   );
