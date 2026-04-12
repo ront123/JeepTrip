@@ -104,6 +104,11 @@ html, body, #root {
 .relative { position: relative; }
 .absolute { position: absolute; }
 
+/* === RTL Support === */
+.rtl { direction: rtl; text-align: right; }
+.rtl .text-left { text-align: right; } /* Override left utilities in RTL */
+.rtl .header-sub, .rtl .header-title { text-align: right; }
+
 /* === Common Components === */
 .gold-line {
   height: 2px;
@@ -112,6 +117,7 @@ html, body, #root {
   border-radius: 1px;
   opacity: 0.6;
   flex-shrink: 0;
+  width: calc(100% - 48px); /* Force full width within margins */
 }
 
 .screen-header {
@@ -123,7 +129,11 @@ html, body, #root {
   background: linear-gradient(180deg, var(--charcoal) 0%, var(--charcoal) 100%);
   flex-shrink: 0;
 }
-.screen-header.rtl { flex-direction: row-reverse; }
+.screen-header.rtl { 
+  flex-direction: row-reverse; 
+  text-align: right; 
+}
+.screen-header.rtl > div { width: 100%; } /* Ensure text container fills width */
 
 .screen-container {
   flex: 1;

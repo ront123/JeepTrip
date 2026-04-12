@@ -99,7 +99,7 @@ export default function Trips() {
     <div className="trips-screen screen-container">
       {/* Header */}
       <div className={`screen-header ${isRTL ? 'rtl' : ''}`}>
-        <div className={isRTL ? 'text-right' : ''}>
+        <div>
           <p className="header-sub">{isRTL ? 'המסע הבא שלך' : 'YOUR NEXT ADVENTURE'}</p>
           <h1 className="header-title">{isRTL ? 'הטיולים שלי' : 'My Trips'}</h1>
         </div>

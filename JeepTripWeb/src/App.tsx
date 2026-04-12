@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { LanguageProvider } from './context/LanguageContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import Login from './pages/Login';
@@ -12,10 +12,11 @@ import JoinRoute from './pages/JoinRoute';
 
 function AppRoutes() {
   const { session, profile, loading } = useAuth();
+  const { isRTL } = useLanguage();
 
   if (loading) {
     return (
-      <div className="app-shell">
+      <div className={`app-shell ${isRTL ? 'rtl' : ''}`}>
         <div className="center-screen" style={{ flex: 1 }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🚙</div>
@@ -29,7 +30,7 @@ function AppRoutes() {
   // Not logged in
   if (!session) {
     return (
-      <div className="app-shell">
+      <div className={`app-shell ${isRTL ? 'rtl' : ''}`}>
         <Routes>
           <Route path="/join/:token" element={<JoinRoute />} />
           <Route path="/login" element={<Login />} />
@@ -43,7 +44,7 @@ function AppRoutes() {
   // Logged in but pending
   if (profile?.status === 'pending') {
     return (
-      <div className="app-shell">
+      <div className={`app-shell ${isRTL ? 'rtl' : ''}`}>
         <Routes>
           <Route path="/join/:token" element={<JoinRoute />} />
           <Route path="/pending" element={<Pending />} />
