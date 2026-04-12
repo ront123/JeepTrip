@@ -200,14 +200,14 @@ export default function Login() {
         >
           {t('google_login')}
         </button>
-        <button
+        {/* <button
           className="btn btn-outline"
           onClick={() => handleOAuth('apple')}
           disabled={loading}
           style={{ borderColor: '#3A3A32', background: 'var(--charcoal-light)' }}
         >
           {t('apple_login')}
-        </button>
+        </button> */}
 
         <div className="login-switch-mode" onClick={() => setTab(tab === 'login' ? 'register' : 'login')}>
           {tab === 'login' 

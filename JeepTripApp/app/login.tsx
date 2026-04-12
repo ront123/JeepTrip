@@ -331,9 +331,9 @@ export default function LoginScreen() {
               <Text style={styles.socialText}>{t('google_login')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.socialBtn} onPress={() => handleOAuthLogin('apple')} disabled={loading}>
+            {/* <TouchableOpacity style={styles.socialBtn} onPress={() => handleOAuthLogin('apple')} disabled={loading}>
               <Text style={styles.socialText}>{t('apple_login')}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <TouchableOpacity style={styles.switchModeRow} onPress={() => switchMode(mode === 'login' ? 'register' : 'login')}>
               <Text style={styles.switchModeText}>
                 {mode === 'login' 
