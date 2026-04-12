@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import * as React from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { translations } from '../constants/i18n';
 import type { Language, TranslationKey } from '../constants/i18n';
 
@@ -25,7 +26,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const isRTL = language === 'he';
 
   // Set initial dir
-  React.useEffect(() => {
+  useEffect(() => {
     document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
   }, [isRTL]);
 
