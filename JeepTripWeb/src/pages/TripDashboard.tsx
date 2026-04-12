@@ -78,11 +78,6 @@ export default function TripDashboard() {
     setLogistics(logs);
   }, [tripId]);
 
-  const loadMessages = useCallback(async () => {
-    if (!tripId) return;
-    const msgs = await fetchMessages(tripId);
-    setMessages(msgs);
-  }, [tripId]);
 
   // Initial Load (One-time)
   useEffect(() => {

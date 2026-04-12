@@ -6,7 +6,7 @@ import './CreateTrip.css';
 
 export default function CreateTrip() {
   const navigate = useNavigate();
-  const { t, isRTL } = useLanguage();
+  const { isRTL } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
