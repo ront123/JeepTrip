@@ -7,7 +7,7 @@ import './Profile.css';
 
 export default function Profile() {
   const { isRTL } = useLanguage();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -17,9 +17,19 @@ export default function Profile() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setEditName(profile?.full_name || '');
-    setEditVehicle(profile?.vehicle_details || '');
+    if (profile) {
+      setEditName(profile.full_name || '');
+      setEditVehicle(profile.vehicle_details || '');
+    }
   }, [profile]);
+
+  if (authLoading && !profile) {
+    return (
+      <div className="profile-screen screen-container">
+        <div className="center-screen"><div className="spinner" /></div>
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
