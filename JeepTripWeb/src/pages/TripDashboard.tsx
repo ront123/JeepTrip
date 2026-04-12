@@ -286,26 +286,31 @@ export default function TripDashboard() {
     </div>
   );
 
-  const renderNavigation = () => (
-    <div className="tab-content">
-      {trip.lat && trip.lng ? (
-        <div className="map-container">
-          <iframe
-            title="trip-map"
-            width="100%"
-            height="100%"
-            style={{ border: 0, borderRadius: 'var(--r-lg)' }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_KEY}&q=${trip.lat},${trip.lng}&zoom=10`}
-          />
-        </div>
-      ) : (
-        <div className="card" style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
-          <span style={{ fontSize: 40, opacity: 0.5 }}>🧭</span>
-          <p style={{ color: 'var(--sand)', fontSize: 14 }}>Map not configured</p>
-        </div>
-      )}
+  const renderNavigation = () => {
+    const hasCoords = trip.lat && trip.lng;
+    const mapQuery = hasCoords ? `${trip.lat},${trip.lng}` : encodeURIComponent(trip.location_area || '');
+    const showMap = hasCoords || trip.location_area;
+
+    return (
+      <div className="tab-content">
+        {showMap ? (
+          <div className="map-container">
+            <iframe
+              title="trip-map"
+              width="100%"
+              height="100%"
+              style={{ border: 0, borderRadius: 'var(--r-lg)' }}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_KEY}&q=${mapQuery}&zoom=10`}
+            />
+          </div>
+        ) : (
+          <div className="card" style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10 }}>
+            <span style={{ fontSize: 40, opacity: 0.5 }}>🧭</span>
+            <p style={{ color: 'var(--sand)', fontSize: 14 }}>{isRTL ? 'מיקום לא הוגדר' : 'Map not configured'}</p>
+          </div>
+        )}
 
       <div className="nav-btn-row" style={{ flexDirection: row as any }}>
         <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => openWaze('start')}>🏁 {isRTL ? 'נווט להתחלה' : 'Start Point'}</button>
