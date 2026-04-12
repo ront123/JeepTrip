@@ -79,7 +79,7 @@
 /* FAB */
 .fab {
   position: fixed;
-  bottom: 100px; left: 24px;
+  bottom: 100px; right: 24px;
   width: 56px; height: 56px; border-radius: 50%;
   background: linear-gradient(135deg, var(--gold), #A07830);
   border: none; cursor: pointer;
