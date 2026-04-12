@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: u.user_metadata?.full_name || u.user_metadata?.name || 'New User',
             email: u.email,
             vehicle_details: 'Added via Social Login',
+            role: 'member',
             status: 'approved',
           })
           .select()

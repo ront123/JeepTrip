@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,8 +16,7 @@ export default function Login() {
   const [vehicle, setVehicle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  useState(() => {
+  useEffect(() => {
     // Check for errors in the URL (from OAuth redirects)
     const params = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
@@ -26,7 +25,7 @@ export default function Login() {
     if (errorMsg) {
        setError(decodeURIComponent(errorMsg).replace(/\+/g, ' '));
     }
-  });
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) { setError(t('error_fill_all')); return; }
