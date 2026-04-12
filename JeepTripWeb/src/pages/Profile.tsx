@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import './Profile.css';
 
 export default function Profile() {
-  const { t, isRTL } = useLanguage();
+  const { isRTL } = useLanguage();
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
 

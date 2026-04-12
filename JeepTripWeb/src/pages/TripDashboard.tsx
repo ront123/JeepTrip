@@ -144,7 +144,7 @@ export default function TripDashboard() {
     const type = file.type.startsWith('video') ? 'video' : 'image';
     try {
       setUploading(true);
-      const url = await uploadMediaFile(file, type);
+      const url = await uploadMediaFile(file);
       if (chatType === 'group') await sendMessage(tripId, '', url, type);
       else if (selectedRecipient) await sendPrivateMessage(selectedRecipient, '', url, type);
       loadMessages();

@@ -39,7 +39,7 @@ export async function sendMessage(tripId: string, content: string, mediaUrl: str
   if (error) throw new Error(error.message);
 }
 
-export async function uploadMediaFile(file: File, type: 'image' | 'video'): Promise<string> {
+export async function uploadMediaFile(file: File): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
