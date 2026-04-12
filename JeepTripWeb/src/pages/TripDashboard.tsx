@@ -332,7 +332,8 @@ export default function TripDashboard() {
         </a>
       )}
     </div>
-  );
+    );
+  };
 
   const filteredLogistics = logistics.filter(l => l.category === logCat);
 
