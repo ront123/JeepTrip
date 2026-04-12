@@ -291,6 +291,21 @@ export default function TripDashboard() {
     const mapQuery = hasCoords ? `${trip.lat},${trip.lng}` : encodeURIComponent(trip.location_area || '');
     const showMap = hasCoords || trip.location_area;
 
+    if (!GOOGLE_MAPS_KEY) {
+      return (
+        <div className="tab-content">
+          <div className="card" style={{ padding: 'var(--sp-md)', border: '1px solid var(--rust)' }}>
+            <p style={{ color: 'var(--rust-light)', fontWeight: 800 }}>⚠️ {isRTL ? 'מפתח Google Maps חסר' : 'Google Maps API Key Missing'}</p>
+            <p style={{ color: 'var(--sand)', fontSize: 13, marginTop: 4 }}>
+              {isRTL 
+                ? 'יש להוסיף את המשתנה VITE_GOOGLE_MAPS_API_KEY בהגדרות של Vercel.' 
+                : 'Please add VITE_GOOGLE_MAPS_API_KEY to your Vercel Environment Variables.'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="tab-content">
         {showMap ? (
