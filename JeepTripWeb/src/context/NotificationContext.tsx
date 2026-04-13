@@ -18,6 +18,7 @@ interface NotificationContextType {
   monitoredTripCount: number;
   uid: string;
   lastEvent: string | null;
+  systemLogs: string[];
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -32,6 +33,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
   const [monitoredTripCount, setMonitoredTripCount] = useState(0);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
+  const [systemLogs, setSystemLogs] = useState<string[]>([]);
+
+  const addLog = (msg: string) => setSystemLogs(prev => [msg, ...prev].slice(0, 10));
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
@@ -109,10 +113,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     async function setupListener() {
       try {
         setConnectionStatus('loading');
+        addLog('Starting discovery phase...');
         
         // 1. ROBUST TRIP DISCOVERY:
         const { data: groupData } = await supabase.from('group_members').select('group_id').eq('user_id', user!.id);
         const groupIds = (groupData || []).map(g => g.group_id);
+        addLog(`Found ${groupIds.length} groups.`);
 
         if (groupIds.length === 0) {
           userTripIds.current = new Set();
@@ -122,6 +128,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           const monitoredIds = (tripGroupData || []).map(d => (d.trip_id || '').toLowerCase());
           userTripIds.current = new Set(monitoredIds);
           setMonitoredTripCount(monitoredIds.length);
+          addLog(`Monitoring ${monitoredIds.length} trips.`);
 
           // Cache titles for notifications
           (tripGroupData || []).forEach(d => {
@@ -141,6 +148,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // 3. SINGLE BROAD CHANNEL (No filters, aligned with successful mobile logic)
         channel = supabase.channel(`web_global:${user!.id}`)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages' }, (payload) => {
+            addLog('Channel: Raw message received!');
             setLastEvent(`Msg received @ ${new Date().toLocaleTimeString()}: ${JSON.stringify(payload.new).slice(0, 50)}...`);
             const newMsg = payload.new;
             const tripId = (newMsg.trip_id || '').toLowerCase();
@@ -182,6 +190,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             }
           })
           .subscribe((status) => {
+            addLog(`Channel status: ${status}`);
             if (status === 'SUBSCRIBED') setConnectionStatus('connected');
             if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
           });
@@ -202,7 +211,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{ 
       unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, 
       permission, requestPermission, connectionStatus, sendTestNotification,
-      monitoredTripCount, uid: user?.id || '', lastEvent
+      monitoredTripCount, uid: user?.id || '', lastEvent, systemLogs
     }}>
       {children}
     </NotificationContext.Provider>

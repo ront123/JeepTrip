@@ -9,7 +9,7 @@ import './Profile.css';
 export default function Profile() {
   const { isRTL } = useLanguage();
   const { user, profile, refreshProfile, loading: authLoading } = useAuth();
-  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid, lastEvent } = useNotifications();
+  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid, lastEvent, systemLogs } = useNotifications();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -158,6 +158,28 @@ export default function Profile() {
             <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
               <span>{isRTL ? 'מזהה משתמש:' : 'Debug UID:'}</span>
               <span style={{ fontFamily: 'monospace' }}>...{uid.slice(-6)}</span>
+            </div>
+
+            <div className="debug-row" style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(200, 151, 58, 0.1)' }}>
+              <p style={{ fontSize: 10, color: 'var(--gold)', marginBottom: 4 }}>SYSTEM INSIGHT (Discovery):</p>
+              <div style={{
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                padding: 6,
+                borderRadius: 4,
+                fontSize: 9,
+                fontFamily: 'monospace',
+                color: 'var(--sand)',
+                minHeight: 60,
+                maxHeight: 120,
+                overflowY: 'auto',
+                textAlign: 'left'
+              }}>
+                {systemLogs.length === 0 ? 'Initializing...' : systemLogs.map((log, i) => (
+                  <div key={i} style={{ marginBottom: 2, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    • {log}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="debug-row" style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(200, 151, 58, 0.1)' }}>
