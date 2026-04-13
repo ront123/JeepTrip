@@ -16,8 +16,8 @@ import './Admin.css';
 type Tab = 'overview' | 'trips' | 'users' | 'pending';
 
 export default function Admin() {
-  const { t, isRTL } = useLanguage();
-  const { user, profile } = useAuth();
+  const { isRTL } = useLanguage();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
