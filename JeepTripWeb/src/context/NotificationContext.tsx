@@ -28,6 +28,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const activeTripIdRef = useRef<string | null>(null);
   const activeTabRef = useRef<string>('overview');
   const userIdRef = useRef<string | null>(null);
+  const userTripIds = useRef<Set<string>>(new Set());
 
   // Sync refs for the realtime listener
   useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
@@ -56,6 +57,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!user) {
       setUnreadTrips(new Set());
+      setPendingCount(0);
+      userTripIds.current = new Set();
       return;
     }
 
@@ -63,8 +66,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     async function setupListener() {
       try {
+        // Fetch trips once on mount/auth change to know which trips to listen to
         const trips = await fetchMyTrips(true);
-        const tripIds = trips.map(t => t.id);
+        userTripIds.current = new Set(trips.map(t => t.id));
         
         // Initial pending count for admin
         if (profile?.role === 'admin') {
@@ -76,11 +80,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           .on('postgres_changes', { 
             event: 'INSERT', 
             schema: 'public', 
-            table: 'trip_messages',
-            filter: tripIds.length > 0 ? `trip_id=in.(${tripIds.join(',')})` : undefined
+            table: 'trip_messages'
+            // NO FILTER here - we filter client-side for "in" logic reliability
           }, (payload) => {
             const newMsg = payload.new;
             const tripId = newMsg.trip_id;
+
+            // CLIENT-SIDE FILTERING: Check if this trip belongs to the user
+            if (!userTripIds.current.has(tripId)) return;
+
             const isMe = newMsg.sender_id === userIdRef.current;
             const isCurrentlyViewingChat = activeTripIdRef.current === tripId && activeTabRef.current === 'chat';
             
@@ -99,10 +107,21 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 new Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
               }
             } else if (payload.eventType === 'UPDATE') {
-              const oldStatus = payload.old.status;
+              // old/new available? Supabase sometimes doesn't send old payload for updates unless replica identity is Full.
+              // We'll trust the payload status or we can re-fetch count to be safe.
               const newStatus = payload.new.status;
-              if (oldStatus === 'pending' && newStatus !== 'pending') setPendingCount(prev => Math.max(0, prev - 1));
-              else if (oldStatus !== 'pending' && newStatus === 'pending') setPendingCount(prev => prev + 1);
+              const oldRecord = payload.old as any;
+              
+              if (oldRecord && oldRecord.status === 'pending' && newStatus !== 'pending') {
+                setPendingCount(prev => Math.max(0, prev - 1));
+              } else if (oldRecord && oldRecord.status !== 'pending' && newStatus === 'pending') {
+                setPendingCount(prev => prev + 1);
+              } else if (!oldRecord) {
+                // If old record is missing, we re-fetch to stay accurate
+                supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending').then(({ count }) => {
+                  setPendingCount(count || 0);
+                });
+              }
             }
           })
           .subscribe();
@@ -116,7 +135,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id, profile?.role]); // Re-run when user or their role is determined
 
   return (
     <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission }}>
