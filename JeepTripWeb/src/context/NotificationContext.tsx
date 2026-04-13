@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 import { fetchMyTrips } from '../lib/trips';
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
@@ -21,6 +22,7 @@ const NotificationContext = createContext<NotificationContextType | null>(null);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuth();
+  const { isRTL } = useLanguage();
   const [unreadTrips, setUnreadTrips] = useState<Set<string>>(new Set());
   const [pendingCount, setPendingCount] = useState(0);
   const [activeTripId, _setActiveTrip] = useState<string | null>(null);
