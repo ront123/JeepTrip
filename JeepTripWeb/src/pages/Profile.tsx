@@ -131,8 +131,23 @@ export default function Profile() {
           </button>
 
           <div style={{ marginTop: 'var(--sp-xl)', paddingTop: 'var(--sp-md)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <div className={`debug-row ${rtl}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 14, color: 'var(--sand)' }}>{isRTL ? 'השתק התראות (בווב)' : 'Mute Sound (Web)'}</span>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '12px 20px',
+              border: '1px solid var(--gold)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--gold)'
+            }}>
+              <span style={{ 
+                fontSize: 14, 
+                fontWeight: '700', 
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+              }}>
+                {isRTL ? 'השתק התראות' : 'Mute Notifications'}
+              </span>
               <label className="switch">
                 <input type="checkbox" checked={isMuted} onChange={(e) => setIsMuted(e.target.checked)} />
                 <span className="slider round"></span>
