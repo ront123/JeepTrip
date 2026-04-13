@@ -52,14 +52,18 @@ export default function TripDashboard() {
   const activeTabRef = useRef(activeTab);
   const userIdRef = useRef(userId);
   const tripTitleRef = useRef(trip?.title);
+  const userNameMap = useRef<Record<string, string>>({});
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
   useEffect(() => { tripTitleRef.current = trip?.title; }, [trip?.title]);
 
   const getSenderName = (senderId: string) => {
+    if (userNameMap.current[senderId]) return userNameMap.current[senderId];
     const attendee = trip?.trip_attendees?.find((a: any) => a.user_id === senderId);
-    return attendee?.users?.full_name || 'User';
+    const name = attendee?.users?.full_name || 'User';
+    if (name !== 'User') userNameMap.current[senderId] = name;
+    return name;
   };
 
   const formatNewMessage = (msg: any) => {
@@ -79,6 +83,12 @@ export default function TripDashboard() {
     try {
       const data = await fetchTrip(tripId);
       setTrip(data);
+      // Update name map from attendees
+      if (data?.trip_attendees) {
+        data.trip_attendees.forEach((a: any) => {
+          if (a.users?.full_name) userNameMap.current[a.user_id] = a.users.full_name;
+        });
+      }
     } catch (e) { console.error(e); }
   }, [tripId]);
 
@@ -151,10 +161,17 @@ export default function TripDashboard() {
     }
   }, [activeTab]);
 
-  // 2. Smooth scroll when messages arrive
+  // 2. Smooth scroll when messages arrive + update name map
   useEffect(() => {
-    if (activeTab === 'chat' && messages.length > 0) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      // Populate name map from message history (which has joined user data)
+      messages.forEach(m => {
+        if (m.users?.full_name) userNameMap.current[m.sender_id] = m.users.full_name;
+      });
+
+      if (activeTab === 'chat') {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   }, [messages]);
 
