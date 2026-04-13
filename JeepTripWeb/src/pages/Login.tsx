@@ -99,6 +99,23 @@ export default function Login() {
     }
   };
 
+  const handleOAuth = async (provider: 'google') => {
+    try {
+      setLoading(true);
+      const { error: authError } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: window.location.origin + '/trips',
+        },
+      });
+      if (authError) throw authError;
+    } catch (err: any) {
+      setError(err.message || t('error_unknown'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-screen">
       {/* Top gold accent */}
