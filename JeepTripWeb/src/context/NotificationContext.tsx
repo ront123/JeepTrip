@@ -62,7 +62,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         alert(isRTL 
           ? 'במכשירי iPhone/iPad יש להוסיף את האתר למסך הבית ("הוסף למסך הבית") ולפתוח אותו משם כדי לאפשר התראות.' 
           : 'On iOS, you must "Add to Home Screen" and open the app from there to enable notifications.');
-      } else if (!window.isSecureContext) {
+      } else if (!(window as any).isSecureContext) {
         alert(isRTL 
           ? 'התראות דורשות חיבור מאובטח (HTTPS). וודא שכתובת האתר מתחילה ב-https://.' 
           : 'Notifications require a secure context (HTTPS). please ensure your URL starts with https://.');
