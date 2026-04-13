@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { useNotifications } from '../context/NotificationContext';
 import { supabase } from '../lib/supabase';
 import './Profile.css';
 
 export default function Profile() {
   const { isRTL } = useLanguage();
   const { user, profile, refreshProfile, loading: authLoading } = useAuth();
-  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid } = useNotifications();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
