@@ -9,7 +9,7 @@ import './Profile.css';
 export default function Profile() {
   const { isRTL } = useLanguage();
   const { user, profile, refreshProfile, loading: authLoading } = useAuth();
-  const { permission, requestPermission, connectionStatus, sendTestNotification } = useNotifications();
+  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid } = useNotifications();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -148,6 +148,16 @@ export default function Profile() {
               <span style={{ fontWeight: 600, color: connectionStatus === 'connected' ? 'var(--olive-light)' : connectionStatus === 'error' ? 'var(--rust-light)' : 'var(--sand)' }}>
                 {connectionStatus.toUpperCase()}
               </span>
+            </div>
+
+            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, opacity: 0.8 }}>
+              <span>{isRTL ? 'טיולים במעקב:' : 'Monitored Trips:'}</span>
+              <span style={{ fontWeight: 600 }}>{monitoredTripCount}</span>
+            </div>
+
+            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
+              <span>{isRTL ? 'מזהה משתמש:' : 'Debug UID:'}</span>
+              <span style={{ fontFamily: 'monospace' }}>...{uid.slice(-6)}</span>
             </div>
 
             {permission !== 'granted' ? (

@@ -16,6 +16,8 @@ interface NotificationContextType {
   requestPermission: () => Promise<void>;
   connectionStatus: ConnectionStatus;
   sendTestNotification: () => void;
+  monitoredTripCount: number;
+  uid: string;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -28,6 +30,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activeTripId, _setActiveTrip] = useState<string | null>(null);
   const [activeTab, _setActiveTab] = useState<string>('overview');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
+  const [monitoredTripCount, setMonitoredTripCount] = useState(0);
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
@@ -103,6 +106,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       setPendingCount(0);
       userTripIds.current = new Set();
       setConnectionStatus('loading');
+      setMonitoredTripCount(0);
       return;
     }
 
@@ -111,9 +115,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     async function setupListener() {
       try {
         setConnectionStatus('loading');
-        // Fetch trips once on mount/auth change
-        const trips = await fetchMyTrips(true);
-        userTripIds.current = new Set(trips.map(t => t.id.toLowerCase()));
+        // Fetch ALL user trips for monitoring (less restrictive filter for alerts)
+        const { data: tripData } = await supabase
+          .from('trip_attendees')
+          .select('trip_id, trips(title)')
+          .eq('user_id', user!.id);
+        
+        const monitoredIds = (tripData || []).map(d => (d.trip_id || '').toLowerCase());
+        userTripIds.current = new Set(monitoredIds);
+        setMonitoredTripCount(monitoredIds.length);
         
         // Initial pending count for admin
         if (profile?.role === 'admin') {
@@ -139,7 +149,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
               setUnreadTrips(prev => new Set(prev).add(tripId));
               if ('Notification' in window && Notification.permission === 'granted') {
-                const tripTitle = trips.find(t => t.id.toLowerCase() === tripId)?.title || 'JeepTrip';
+                const tripTitle = (tripData || []).find(d => d.trip_id.toLowerCase() === tripId)?.trips?.title || 'JeepTrip';
                 new Notification(`🚙 ${tripTitle}`, { body: `${newMsg.content || 'New media message'}`, icon: '/jeep.svg' });
               }
             }
@@ -184,7 +194,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [user?.id, profile?.role]);
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission, connectionStatus, sendTestNotification }}>
+    <NotificationContext.Provider value={{ 
+      unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, 
+      permission, requestPermission, connectionStatus, sendTestNotification,
+      monitoredTripCount, uid: user?.id || ''
+    }}>
       {children}
     </NotificationContext.Provider>
   );
