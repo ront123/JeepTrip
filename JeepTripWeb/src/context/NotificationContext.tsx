@@ -19,8 +19,6 @@ interface NotificationContextType {
   sendTestNotification: () => void;
   monitoredTripCount: number;
   uid: string;
-  lastEvent: string | null;
-  systemLogs: string[];
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -34,13 +32,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activeTab, _setActiveTab] = useState<string>('overview');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
   const [monitoredTripCount, setMonitoredTripCount] = useState(0);
-  const [lastEvent, setLastEvent] = useState<string | null>(null);
-  const [systemLogs, setSystemLogs] = useState<string[]>([]);
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
   
-  const addLog = (msg: string) => setSystemLogs(prev => [msg, ...prev].slice(0, 10));
   const activeTripIdRef = useRef<string | null>(null);
   const activeTabRef = useRef<string>('overview');
   const userIdRef = useRef<string | null>(null);
@@ -75,7 +70,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           : 'On iOS, you must "Add to Home Screen" and open the app from there to enable notifications.');
       } else {
         alert(isRTL 
-          ? 'הדפדפן שלך לא תומך בהתראות או שהן חסומות בהגדרות המערכת.' 
+          ? 'התראות דורשות חיבור מאובטח (HTTPS). וודא שכתובת האתר מתחילה ב-https://.' 
           : 'Your browser does not support notifications or they are disabled in system settings.');
       }
       return;
@@ -115,14 +110,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     async function setupListener() {
       try {
         setConnectionStatus('loading');
-        addLog('Starting discovery phase...');
         
         // 1. ROBUST TRIP DISCOVERY:
         const trips = await fetchMyTrips(true);
         const currentTripIds = (trips || []).map(t => (t.id || '').toLowerCase());
         userTripIds.current = new Set(currentTripIds);
         setMonitoredTripCount(currentTripIds.length);
-        addLog(`Found ${currentTripIds.length} trips via discovery.`);
 
         // Update titles cache
         (trips || []).forEach(t => {
@@ -134,16 +127,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // 2. Lifecycle Management: Cleanup old channels
         channelMap.current.forEach((ch, id) => {
           if (!currentTripIds.includes(id)) {
-            addLog(`Closing inactive channel: ${id.slice(0, 8)}`);
             supabase.removeChannel(ch);
             channelMap.current.delete(id);
           }
         });
 
         // 3. Lifecycle Management: Setup new channels (ONE PER TRIP with FILTER)
-        // This mirrors TripDashboard and bypasses security blocks on broad listeners
         currentTripIds.forEach(tid => {
-          if (channelMap.current.has(tid)) return; // Already listening
+          if (channelMap.current.has(tid)) return;
 
           const ch = supabase.channel(`notif:${tid}`)
             .on('postgres_changes', { 
@@ -152,9 +143,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               table: 'trip_messages', 
               filter: `trip_id=eq.${tid}` 
             }, (payload) => {
-              addLog(`New msg for trip ${tid.slice(0, 8)}`);
-              setLastEvent(`Msg received @ ${new Date().toLocaleTimeString()}: ${JSON.stringify(payload.new).slice(0, 50)}...`);
-              
               const newMsg = payload.new;
               const isMe = newMsg.sender_id === userIdRef.current;
               const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tid && activeTabRef.current === 'chat';
@@ -170,14 +158,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 }
               }
             })
-            .subscribe((status) => {
-              addLog(`Trip ${tid.slice(0, 4)} status: ${status}`);
-            });
+            .subscribe();
           
           channelMap.current.set(tid, ch);
         });
 
-        // 4. Admin Listener (Broad is fine if user is admin)
+        // 4. Admin Listener
         if (profile?.role === 'admin') {
           const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
           setPendingCount(count || 0);
@@ -197,9 +183,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               if (oldStatus === 'pending' && newStatus !== 'pending') setPendingCount(prev => Math.max(0, prev - 1));
               else if (oldStatus !== 'pending' && newStatus === 'pending') setPendingCount(prev => prev + 1);
             })
-            .subscribe((status) => {
-              addLog(`Admin channel: ${status}`);
-            });
+            .subscribe();
         }
 
         setConnectionStatus('connected');
@@ -222,7 +206,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{ 
       unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, 
       permission, requestPermission, connectionStatus, sendTestNotification,
-      monitoredTripCount, uid: user?.id || '', lastEvent, systemLogs
+      monitoredTripCount, uid: user?.id || ''
     }}>
       {children}
     </NotificationContext.Provider>
