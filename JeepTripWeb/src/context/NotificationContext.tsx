@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { supabase } from '../lib/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
 
@@ -37,7 +38,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const activeTripIdRef = useRef<string | null>(null);
   const activeTabRef = useRef<string>('overview');
   const userIdRef = useRef<string | null>(null);
-  const userTripIds = useRef<Set<string>>(new Set());
+  const channelMap = useRef<Map<string, RealtimeChannel>>(new Map());
   const tripTitles = useRef<Record<string, string>>({});
 
   // Sync refs for the realtime listener
@@ -79,12 +80,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       const res = await Notification.requestPermission();
       setPermission(res);
-      if (res === 'denied') {
-        alert(isRTL ? 'ההרשאה להתראות נחסמה. עליך לאשר אותן בהגדרות הדפדפן כדי לקבל עדכונים.' : 'Notification permission was denied. Please enable them in your browser settings.');
-      }
     } catch (err) {
       console.error('Error requesting notification permission:', err);
-      alert(isRTL ? 'שגיאה בבקשת הרשאה. ייתכן שהדפדפן חוסם בקשות אלו.' : 'Error requesting notification permission. Your browser may be blocking this request.');
     }
   };
 
@@ -104,101 +101,112 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!user) {
       setUnreadTrips(new Set());
       setPendingCount(0);
-      userTripIds.current = new Set();
       setConnectionStatus('loading');
       setMonitoredTripCount(0);
       return;
     }
 
-    let channel: any = null;
+    let adminChannel: RealtimeChannel | null = null;
 
     async function setupListener() {
       try {
         setConnectionStatus('loading');
         
-        // Fetch ALL user trips for monitoring (Force fresh from table)
-        const { data: tripData } = await supabase
-          .from('trip_attendees')
-          .select('trip_id, trips(title)')
-          .eq('user_id', user!.id);
+        // 1. Discovery phase
+        const { data: groupData } = await supabase.from('group_members').select('group_id').eq('user_id', user!.id);
+        const groupIds = (groupData || []).map(g => g.group_id);
+
+        if (groupIds.length === 0) {
+          setMonitoredTripCount(0);
+        } else {
+          const { data: tripGroupData } = await supabase.from('trip_groups').select('trip_id, trips(title)').in('group_id', groupIds);
+          const currentTripIds = (tripGroupData || []).map(d => (d.trip_id || '').toLowerCase());
+          setMonitoredTripCount(currentTripIds.length);
+
+          // Update titles cache
+          (tripGroupData || []).forEach(d => {
+            if (d.trip_id) {
+              const title = (Array.isArray(d.trips) ? d.trips[0]?.title : (d.trips as any)?.title) || 'JeepTrip';
+              tripTitles.current[d.trip_id.toLowerCase()] = title;
+            }
+          });
+
+          // 2. Lifecycle Management: Cleanup old channels
+          channelMap.current.forEach((ch, id) => {
+            if (!currentTripIds.includes(id)) {
+              supabase.removeChannel(ch);
+              channelMap.current.delete(id);
+            }
+          });
+
+          // 3. Lifecycle Management: Setup new channels (ONE PER TRIP for permission accuracy)
+          currentTripIds.forEach(tid => {
+            if (channelMap.current.has(tid)) return; // Already listening
+
+            const ch = supabase.channel(`notif:${tid}`)
+              .on('postgres_changes', { 
+                event: 'INSERT', 
+                schema: 'public', 
+                table: 'trip_messages', 
+                filter: `trip_id=eq.${tid}` 
+              }, (payload) => {
+                const newMsg = payload.new;
+                const isMe = newMsg.sender_id === userIdRef.current;
+                const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tid && activeTabRef.current === 'chat';
+                
+                if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
+                  setUnreadTrips(prev => new Set(prev).add(tid));
+                  if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                    const title = tripTitles.current[tid] || 'JeepTrip';
+                    new window.Notification(`🚙 ${title}`, { 
+                      body: `${newMsg.content || 'New media message'}`, 
+                      icon: '/jeep.svg' 
+                    });
+                  }
+                }
+              })
+              .subscribe();
+            
+            channelMap.current.set(tid, ch);
+          });
+        }
         
-        const monitoredIds = (tripData || []).map(d => (d.trip_id || '').toLowerCase());
-        userTripIds.current = new Set(monitoredIds);
-        setMonitoredTripCount(monitoredIds.length);
-        
-        // Cache titles for notifications
-        (tripData || []).forEach(d => {
-          if (d.trip_id) {
-            const title = (Array.isArray(d.trips) ? d.trips[0]?.title : (d.trips as any)?.title) || 'JeepTrip';
-            tripTitles.current[d.trip_id.toLowerCase()] = title;
-          }
-        });
-        
-        // Initial pending count for admin
+        // 4. Admin Listener (Global is fine for this table)
         if (profile?.role === 'admin') {
           const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
           setPendingCount(count || 0);
+
+          adminChannel = supabase.channel('admin_notifications')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
+              if (payload.new.status === 'pending') {
+                setPendingCount(prev => prev + 1);
+                if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                  new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
+                }
+              }
+            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
+              const oldStatus = (payload.old as any)?.status;
+              const newStatus = payload.new.status;
+              if (oldStatus === 'pending' && newStatus !== 'pending') setPendingCount(prev => Math.max(0, prev - 1));
+              else if (oldStatus !== 'pending' && newStatus === 'pending') setPendingCount(prev => prev + 1);
+            })
+            .subscribe();
         }
 
-        channel = supabase.channel('global_notifications')
-          .on('postgres_changes', { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'trip_messages'
-          }, (payload) => {
-            const newMsg = payload.new;
-            const tripId = (newMsg.trip_id || '').toLowerCase();
-
-            // Check if this trip belongs to the user
-            if (!userTripIds.current.has(tripId)) return;
-
-            const isMe = newMsg.sender_id === userIdRef.current;
-            const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tripId && activeTabRef.current === 'chat';
-            
-            if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
-              setUnreadTrips(prev => new Set(prev).add(tripId));
-              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
-                const title = tripTitles.current[tripId] || 'JeepTrip';
-                new window.Notification(`🚙 ${title}`, { 
-                  body: `${newMsg.content || 'New media message'}`, 
-                  icon: '/jeep.svg' 
-                });
-              }
-            }
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
-            if (profile?.role !== 'admin') return;
-
-            if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
-              setPendingCount(prev => prev + 1);
-              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
-                new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
-              }
-            } else if (payload.eventType === 'UPDATE') {
-              const newStatus = payload.new.status;
-              const oldRecord = payload.old as any;
-              
-              if (oldRecord && oldRecord.status === 'pending' && newStatus !== 'pending') {
-                setPendingCount(prev => Math.max(0, prev - 1));
-              } else if (oldRecord && oldRecord.status !== 'pending' && newStatus === 'pending') {
-                setPendingCount(prev => prev + 1);
-              }
-            }
-          })
-          .subscribe((status) => {
-            if (status === 'SUBSCRIBED') setConnectionStatus('connected');
-            if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
-          });
+        setConnectionStatus('connected');
       } catch (err) {
         setConnectionStatus('error');
-        console.error('Error setting up global notifications:', err);
+        console.error('Error setting up multi-channel notifications:', err);
       }
     }
 
     setupListener();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (adminChannel) supabase.removeChannel(adminChannel);
+      channelMap.current.forEach(ch => supabase.removeChannel(ch));
+      channelMap.current.clear();
     };
   }, [user?.id, profile?.role]);
 
