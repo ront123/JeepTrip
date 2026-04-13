@@ -1,3 +1,4 @@
+import { View, Text, ScrollView, Image, StyleSheet, Dimensions } from 'react-native';
 import { useLanguage } from '../../context/LanguageContext';
 import { Palette } from '../../constants/theme';
 
