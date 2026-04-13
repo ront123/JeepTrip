@@ -117,20 +117,30 @@
 
         @media print {
             body {
-                background-color: white;
-                color: black;
+                background-color: white !important;
+                color: black !important;
+                -webkit-print-color-adjust: exact;
             }
             section {
                 box-shadow: none;
                 border: 1px solid #ccc;
                 page-break-inside: avoid;
+                background: white !important;
+                color: black !important;
+            }
+            h1, h2, p, li, strong {
+                color: black !important;
             }
             h1, h2 {
-                color: #8b6b23;
+                color: #8b6b23 !important;
+                border-bottom: 1px solid #8b6b23;
             }
             .container {
                 max-width: 100%;
                 padding: 0;
+            }
+            img {
+                border: 1px solid #eee;
             }
         }
     </style>
@@ -159,8 +169,8 @@
 
     <section>
         <h2>📊 2. מסך הבית (Headquarters)</h2>
-        <p>כאן הכל מתחיל. מסך הבית מרכז עבורכם את כל מה שחשוב בזמן אמת.</p>
-        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/dashboard_screenshot.png" alt="Dashboard">
+        <p>במסך הבית תוכלו לראות את כל המשימות הפעילות אליהן אתם רשומים.</p>
+        <img src="JeepTripApp/assets/images/dashboard_screenshot.png" alt="Dashboard">
         <ul>
             <li><strong>סיכום משימות</strong>: צפייה במשימות הקרובות ביותר שלכם.</li>
             <li><strong>סטטיסטיקה</strong>: מעקב אחרי קילומטראז' מצטבר ושעות שטח (בקרוב).</li>
@@ -170,8 +180,8 @@
 
     <section>
         <h2>➕ 3. יצירת משימה חדשה</h2>
-        <p>יש לכם מסלול חדש בראש? פתחו משימה והזמינו את החברים.</p>
-        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/create_mission_screenshot.png" alt="Create Mission">
+        <p>כדי לפתוח טיול חדש, לחצו על כפתור ה-"+" והזינו את פרטי המסע.</p>
+        <img src="JeepTripApp/assets/images/create_mission_screenshot.png" alt="Create Mission">
         <ol>
             <li><strong>פרטי המשימה</strong>: תנו כותרת מרשימה, בחרו תאריך ושעה.</li>
             <li><strong>מיקום</strong>: סמנו את נקודת המפגש על המפה.</li>
@@ -183,7 +193,7 @@
     <section>
         <h2>🗺️ 4. בתוך המשימה - מפה ותקשורת</h2>
         <p>כאן הלב הפועם של JeepTrip. תיאום מושלם לפני ובמהלך הנסיעה.</p>
-        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/trip_details_screenshot.png" alt="Trip Details">
+        <img src="JeepTripApp/assets/images/trip_details_screenshot.png" alt="Trip Details">
         <ul>
             <li><strong>מפת משימה</strong>: צפייה בתוואי השטח ובמיקום המשתתפים.</li>
             <li><strong>צאט ייעודי</strong>: שלחו הודעות קוליות, תמונות ועדכונים מהשטח.</li>
