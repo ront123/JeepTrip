@@ -2,10 +2,10 @@ import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import './Help.css';
 
-// Importing generated screenshots (mockups)
-const DASHBOARD_IMG = "/Users/rontoledo/.gemini/antigravity/brain/c4cc0760-c28b-490f-94d8-f7534a64725c/dashboard_screenshot_1776078546421.png";
-const CREATE_IMG = "/Users/rontoledo/.gemini/antigravity/brain/c4cc0760-c28b-490f-94d8-f7534a64725c/create_mission_screenshot_1776078582560.png";
-const DETAILS_IMG = "/Users/rontoledo/.gemini/antigravity/brain/c4cc0760-c28b-490f-94d8-f7534a64725c/trip_details_screenshotfixed_1776078639658.png";
+// Importing local assets
+import DASHBOARD_IMG from '../assets/images/dashboard_screenshot.png';
+import CREATE_IMG from '../assets/images/create_mission_screenshot.png';
+import DETAILS_IMG from '../assets/images/trip_details_screenshot.png';
 
 export default function Help() {
   const { isRTL } = useLanguage();

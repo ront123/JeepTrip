@@ -5,7 +5,7 @@ import { Palette } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
-// Using the same generated mockups
+// Using local assets
 const DASHBOARD_IMG = require('../../assets/images/dashboard_screenshot.png');
 const CREATE_IMG = require('../../assets/images/create_mission_screenshot.png');
 const DETAILS_IMG = require('../../assets/images/trip_details_screenshot.png');
