@@ -38,6 +38,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const activeTabRef = useRef<string>('overview');
   const userIdRef = useRef<string | null>(null);
   const userTripIds = useRef<Set<string>>(new Set());
+  const tripTitles = useRef<Record<string, string>>({});
 
   // Sync refs for the realtime listener
   useEffect(() => { activeTripIdRef.current = activeTripId; }, [activeTripId]);
@@ -114,7 +115,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     async function setupListener() {
       try {
         setConnectionStatus('loading');
-        // Fetch ALL user trips for monitoring (less restrictive filter for alerts)
+        
+        // Fetch ALL user trips for monitoring (Force fresh from table)
         const { data: tripData } = await supabase
           .from('trip_attendees')
           .select('trip_id, trips(title)')
@@ -123,6 +125,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const monitoredIds = (tripData || []).map(d => (d.trip_id || '').toLowerCase());
         userTripIds.current = new Set(monitoredIds);
         setMonitoredTripCount(monitoredIds.length);
+        
+        // Cache titles for notifications
+        (tripData || []).forEach(d => {
+          if (d.trip_id) {
+            const title = (Array.isArray(d.trips) ? d.trips[0]?.title : (d.trips as any)?.title) || 'JeepTrip';
+            tripTitles.current[d.trip_id.toLowerCase()] = title;
+          }
+        });
         
         // Initial pending count for admin
         if (profile?.role === 'admin') {
@@ -139,7 +149,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             const newMsg = payload.new;
             const tripId = (newMsg.trip_id || '').toLowerCase();
 
-            // CLIENT-SIDE FILTERING: Check if this trip belongs to the user
+            // Check if this trip belongs to the user
             if (!userTripIds.current.has(tripId)) return;
 
             const isMe = newMsg.sender_id === userIdRef.current;
@@ -147,18 +157,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             
             if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
               setUnreadTrips(prev => new Set(prev).add(tripId));
-              if ('Notification' in window && Notification.permission === 'granted') {
-                const tripMatch = (tripData || []).find(d => (d.trip_id || '').toLowerCase() === tripId);
-                const tripTitle = (Array.isArray(tripMatch?.trips) ? tripMatch?.trips[0]?.title : (tripMatch?.trips as any)?.title) || 'JeepTrip';
-                new Notification(`🚙 ${tripTitle}`, { body: `${newMsg.content || 'New media message'}`, icon: '/jeep.svg' });
+              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                const title = tripTitles.current[tripId] || 'JeepTrip';
+                new window.Notification(`🚙 ${title}`, { 
+                  body: `${newMsg.content || 'New media message'}`, 
+                  icon: '/jeep.svg' 
+                });
               }
             }
           })
           .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+            if (profile?.role !== 'admin') return;
+
             if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
               setPendingCount(prev => prev + 1);
-              if (profile?.role === 'admin' && 'Notification' in window && Notification.permission === 'granted') {
-                new Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
+              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
               }
             } else if (payload.eventType === 'UPDATE') {
               const newStatus = payload.new.status;
@@ -168,11 +182,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 setPendingCount(prev => Math.max(0, prev - 1));
               } else if (oldRecord && oldRecord.status !== 'pending' && newStatus === 'pending') {
                 setPendingCount(prev => prev + 1);
-              } else if (!oldRecord) {
-                // Refetch for accuracy if old record missing
-                supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending').then(({ count }) => {
-                  setPendingCount(count || 0);
-                });
               }
             }
           })

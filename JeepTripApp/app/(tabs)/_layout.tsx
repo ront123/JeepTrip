@@ -7,11 +7,15 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Palette } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLanguage } from '@/context/LanguageContext';
+import { useNotifications } from '@/context/NotificationContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'dark'];
   const { t } = useLanguage();
+  const { unreadTrips, pendingCount } = useNotifications();
+
+  const hasUnreadMessages = unreadTrips.size > 0;
 
   return (
     <Tabs
@@ -46,6 +50,8 @@ export default function TabLayout() {
         options={{
           title: t('tab_trips'),
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
+          tabBarBadge: hasUnreadMessages ? '' : undefined,
+          tabBarBadgeStyle: { backgroundColor: Palette.gold, scaleX: 0.8, scaleY: 0.8 },
         }}
       />
 
@@ -61,6 +67,8 @@ export default function TabLayout() {
         options={{
           title: t('tab_admin'),
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
+          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: Palette.gold },
         }}
       />
     </Tabs>
