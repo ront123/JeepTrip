@@ -9,7 +9,7 @@ import './Profile.css';
 export default function Profile() {
   const { isRTL } = useLanguage();
   const { user, profile, refreshProfile, loading: authLoading } = useAuth();
-  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid } = useNotifications();
+  const { permission, requestPermission, connectionStatus, sendTestNotification, monitoredTripCount, uid, lastEvent } = useNotifications();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -155,9 +155,31 @@ export default function Profile() {
               <span style={{ fontWeight: 600 }}>{monitoredTripCount}</span>
             </div>
 
-            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
+            <div className=\"debug-row\" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
               <span>{isRTL ? 'מזהה משתמש:' : 'Debug UID:'}</span>
               <span style={{ fontFamily: 'monospace' }}>...{uid.slice(-6)}</span>
+            </div>
+
+            <div className=\"debug-row\" style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(200, 151, 58, 0.1)' }}>
+              <p style={{ fontSize: 10, color: 'var(--gold)', marginBottom: 4 }}>LIVE EVENT LOG:</p>
+              <div style={{
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                padding: 6,
+                borderRadius: 4,
+                fontSize: 10,
+                fontFamily: 'monospace',
+                color: lastEvent ? 'var(--olive-light)' : 'var(--mud)',
+                minHeight: 30,
+                wordBreak: 'break-all',
+                textAlign: 'left'
+              }}>
+                {lastEvent || (isRTL ? 'ממתין להודעות...' : 'Waiting for incoming events...')}
+              </div>
+              {lastEvent && (
+                <p style={{ fontSize: 9, color: 'var(--sand)', marginTop: 4 }}>
+                  {isRTL ? '✓ הודעה אחרונה הגיעה מהשרת' : '✓ Last message received from server'}
+                </p>
+              )}
             </div>
 
             {permission !== 'granted' ? (

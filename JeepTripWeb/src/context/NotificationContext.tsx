@@ -17,6 +17,7 @@ interface NotificationContextType {
   sendTestNotification: () => void;
   monitoredTripCount: number;
   uid: string;
+  lastEvent: string | null;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -30,6 +31,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activeTab, _setActiveTab] = useState<string>('overview');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
   const [monitoredTripCount, setMonitoredTripCount] = useState(0);
+  const [lastEvent, setLastEvent] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
@@ -139,6 +141,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // 3. SINGLE BROAD CHANNEL (No filters, aligned with successful mobile logic)
         channel = supabase.channel(`web_global:${user!.id}`)
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages' }, (payload) => {
+            setLastEvent(`Msg received @ ${new Date().toLocaleTimeString()}: ${JSON.stringify(payload.new).slice(0, 50)}...`);
             const newMsg = payload.new;
             const tripId = (newMsg.trip_id || '').toLowerCase();
 
@@ -199,7 +202,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{ 
       unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, 
       permission, requestPermission, connectionStatus, sendTestNotification,
-      monitoredTripCount, uid: user?.id || ''
+      monitoredTripCount, uid: user?.id || '', lastEvent
     }}>
       {children}
     </NotificationContext.Provider>
