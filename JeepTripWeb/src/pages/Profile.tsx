@@ -138,7 +138,8 @@ export default function Profile() {
               padding: '12px 20px',
               border: '1px solid var(--gold)',
               borderRadius: 'var(--radius-md)',
-              color: 'var(--gold)'
+              color: 'var(--gold)',
+              gap: '24px'
             }}>
               <span style={{ 
                 fontSize: 14, 
