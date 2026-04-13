@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { fetchMyTrips } from '../lib/trips';
+import { supabase } from '../lib/supabase';
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
 
@@ -149,7 +148,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
               setUnreadTrips(prev => new Set(prev).add(tripId));
               if ('Notification' in window && Notification.permission === 'granted') {
-                const tripTitle = (tripData || []).find(d => d.trip_id.toLowerCase() === tripId)?.trips?.title || 'JeepTrip';
+                const tripMatch = (tripData || []).find(d => (d.trip_id || '').toLowerCase() === tripId);
+                const tripTitle = (Array.isArray(tripMatch?.trips) ? tripMatch?.trips[0]?.title : (tripMatch?.trips as any)?.title) || 'JeepTrip';
                 new Notification(`🚙 ${tripTitle}`, { body: `${newMsg.content || 'New media message'}`, icon: '/jeep.svg' });
               }
             }
