@@ -42,7 +42,6 @@ export default function TripDashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
 
   // Chat
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const [uploading, setUploading] = useState(false);
