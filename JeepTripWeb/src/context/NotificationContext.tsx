@@ -54,9 +54,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   const requestPermission = async () => {
-    if (!('Notification' in window)) return;
-    const res = await Notification.requestPermission();
-    setPermission(res);
+    if (!('Notification' in window)) {
+      alert(isRTL ? 'הדפדפן שלך לא תומך בהתראות. וודא שאתה גולש בקישור מאובטח (HTTPS) או נסה דפדפן אחר.' : 'Your browser does not support desktop notifications. Ensure you are using HTTPS or try a different browser.');
+      return;
+    }
+    try {
+      const res = await Notification.requestPermission();
+      setPermission(res);
+      if (res === 'denied') {
+        alert(isRTL ? 'ההרשאה להתראות נחסמה. עליך לאשר אותן בהגדרות הדפדפן כדי לקבל עדכונים.' : 'Notification permission was denied. Please enable them in your browser settings.');
+      }
+    } catch (err) {
+      console.error('Error requesting notification permission:', err);
+      alert(isRTL ? 'שגיאה בבקשת הרשאה. ייתכן שהדפדפן חוסם בקשות אלו.' : 'Error requesting notification permission. Your browser may be blocking this request.');
+    }
   };
 
   const sendTestNotification = () => {
