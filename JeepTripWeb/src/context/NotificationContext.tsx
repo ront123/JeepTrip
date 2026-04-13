@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { supabase } from '../lib/supabase';
-import { RealtimeChannel } from '@supabase/supabase-js';
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
 
@@ -38,7 +37,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const activeTripIdRef = useRef<string | null>(null);
   const activeTabRef = useRef<string>('overview');
   const userIdRef = useRef<string | null>(null);
-  const channelMap = useRef<Map<string, RealtimeChannel>>(new Map());
+  const userTripIds = useRef<Set<string>>(new Set());
   const tripTitles = useRef<Record<string, string>>({});
 
   // Sync refs for the realtime listener
@@ -66,10 +65,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         alert(isRTL 
           ? 'במכשירי iPhone/iPad יש להוסיף את האתר למסך הבית ("הוסף למסך הבית") ולפתוח אותו משם כדי לאפשר התראות.' 
           : 'On iOS, you must "Add to Home Screen" and open the app from there to enable notifications.');
-      } else if (!(window as any).isSecureContext) {
-        alert(isRTL 
-          ? 'התראות דורשות חיבור מאובטח (HTTPS). וודא שכתובת האתר מתחילה ב-https://.' 
-          : 'Notifications require a secure context (HTTPS). please ensure your URL starts with https://.');
       } else {
         alert(isRTL 
           ? 'הדפדפן שלך לא תומך בהתראות או שהן חסומות בהגדרות המערכת.' 
@@ -96,117 +91,107 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  // Global Realtime Listener
+  // Global Realtime Listener - ALIGNED WITH MOBILE (Broad Listener)
   useEffect(() => {
     if (!user) {
       setUnreadTrips(new Set());
       setPendingCount(0);
+      userTripIds.current = new Set();
       setConnectionStatus('loading');
       setMonitoredTripCount(0);
       return;
     }
 
-    let adminChannel: RealtimeChannel | null = null;
+    let channel: any = null;
 
     async function setupListener() {
       try {
         setConnectionStatus('loading');
         
-        // 1. Discovery phase
+        // 1. ROBUST TRIP DISCOVERY:
         const { data: groupData } = await supabase.from('group_members').select('group_id').eq('user_id', user!.id);
         const groupIds = (groupData || []).map(g => g.group_id);
 
         if (groupIds.length === 0) {
+          userTripIds.current = new Set();
           setMonitoredTripCount(0);
         } else {
           const { data: tripGroupData } = await supabase.from('trip_groups').select('trip_id, trips(title)').in('group_id', groupIds);
-          const currentTripIds = (tripGroupData || []).map(d => (d.trip_id || '').toLowerCase());
-          setMonitoredTripCount(currentTripIds.length);
+          const monitoredIds = (tripGroupData || []).map(d => (d.trip_id || '').toLowerCase());
+          userTripIds.current = new Set(monitoredIds);
+          setMonitoredTripCount(monitoredIds.length);
 
-          // Update titles cache
+          // Cache titles for notifications
           (tripGroupData || []).forEach(d => {
             if (d.trip_id) {
               const title = (Array.isArray(d.trips) ? d.trips[0]?.title : (d.trips as any)?.title) || 'JeepTrip';
               tripTitles.current[d.trip_id.toLowerCase()] = title;
             }
           });
-
-          // 2. Lifecycle Management: Cleanup old channels
-          channelMap.current.forEach((ch, id) => {
-            if (!currentTripIds.includes(id)) {
-              supabase.removeChannel(ch);
-              channelMap.current.delete(id);
-            }
-          });
-
-          // 3. Lifecycle Management: Setup new channels (ONE PER TRIP for permission accuracy)
-          currentTripIds.forEach(tid => {
-            if (channelMap.current.has(tid)) return; // Already listening
-
-            const ch = supabase.channel(`notif:${tid}`)
-              .on('postgres_changes', { 
-                event: 'INSERT', 
-                schema: 'public', 
-                table: 'trip_messages', 
-                filter: `trip_id=eq.${tid}` 
-              }, (payload) => {
-                const newMsg = payload.new;
-                const isMe = newMsg.sender_id === userIdRef.current;
-                const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tid && activeTabRef.current === 'chat';
-                
-                if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
-                  setUnreadTrips(prev => new Set(prev).add(tid));
-                  if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
-                    const title = tripTitles.current[tid] || 'JeepTrip';
-                    new window.Notification(`🚙 ${title}`, { 
-                      body: `${newMsg.content || 'New media message'}`, 
-                      icon: '/jeep.svg' 
-                    });
-                  }
-                }
-              })
-              .subscribe();
-            
-            channelMap.current.set(tid, ch);
-          });
         }
         
-        // 4. Admin Listener (Global is fine for this table)
+        // 2. Initial pending count for admin
         if (profile?.role === 'admin') {
           const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
           setPendingCount(count || 0);
-
-          adminChannel = supabase.channel('admin_notifications')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, (payload) => {
-              if (payload.new.status === 'pending') {
-                setPendingCount(prev => prev + 1);
-                if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
-                  new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
-                }
-              }
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
-              const oldStatus = (payload.old as any)?.status;
-              const newStatus = payload.new.status;
-              if (oldStatus === 'pending' && newStatus !== 'pending') setPendingCount(prev => Math.max(0, prev - 1));
-              else if (oldStatus !== 'pending' && newStatus === 'pending') setPendingCount(prev => prev + 1);
-            })
-            .subscribe();
         }
 
-        setConnectionStatus('connected');
+        // 3. SINGLE BROAD CHANNEL (No filters, aligned with successful mobile logic)
+        channel = supabase.channel(`web_global:${user!.id}`)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages' }, (payload) => {
+            const newMsg = payload.new;
+            const tripId = (newMsg.trip_id || '').toLowerCase();
+
+            // JS-SIDE FILTERING (IDENTICAL TO MOBILE)
+            if (!userTripIds.current.has(tripId)) return;
+            if (newMsg.sender_id === userIdRef.current) return;
+
+            const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tripId && activeTabRef.current === 'chat';
+            
+            if (!isCurrentlyViewingChat || document.hidden) {
+              setUnreadTrips(prev => new Set(prev).add(tripId));
+              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                const title = tripTitles.current[tripId] || 'JeepTrip';
+                new window.Notification(`🚙 ${title}`, { 
+                  body: `${newMsg.content || 'New media message'}`, 
+                  icon: '/jeep.svg' 
+                });
+              }
+            }
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+            if (profile?.role !== 'admin') return;
+
+            if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+              setPendingCount(prev => prev + 1);
+              if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+                new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
+              }
+            } else if (payload.eventType === 'UPDATE') {
+              const newStatus = payload.new.status;
+              const oldRecord = payload.old as any;
+              
+              if (oldRecord && oldRecord.status === 'pending' && newStatus !== 'pending') {
+                setPendingCount(prev => Math.max(0, prev - 1));
+              } else if (oldRecord && oldRecord.status !== 'pending' && newStatus === 'pending') {
+                setPendingCount(prev => prev + 1);
+              }
+            }
+          })
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') setConnectionStatus('connected');
+            if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
+          });
       } catch (err) {
         setConnectionStatus('error');
-        console.error('Error setting up multi-channel notifications:', err);
+        console.error('Error setting up web notifications:', err);
       }
     }
 
     setupListener();
 
     return () => {
-      if (adminChannel) supabase.removeChannel(adminChannel);
-      channelMap.current.forEach(ch => supabase.removeChannel(ch));
-      channelMap.current.clear();
+      if (channel) supabase.removeChannel(channel);
     };
   }, [user?.id, profile?.role]);
 
