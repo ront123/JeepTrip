@@ -125,16 +125,16 @@ export default function Profile() {
             </button>
           )}
 
-          <button className=\"btn btn-danger-outline\" style={{ marginTop: 'var(--sp-md)' }} onClick={handleLogout}>
+          <button className="btn btn-danger-outline" style={{ marginTop: 'var(--sp-md)' }} onClick={handleLogout}>
             {isRTL ? 'התנתק מהמערכת' : 'Logout'}
           </button>
 
           <div style={{ marginTop: 'var(--sp-xl)', paddingTop: 'var(--sp-md)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <div className={`debug-row ${rtl}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 14, color: 'var(--sand)' }}>{isRTL ? 'השתק התראות (בווב)' : 'Mute Sound (Web)'}</span>
-              <label className=\"switch\">
-                <input type=\"checkbox\" checked={isMuted} onChange={(e) => setIsMuted(e.target.checked)} />
-                <span className=\"slider round\"></span>
+              <label className="switch">
+                <input type="checkbox" checked={isMuted} onChange={(e) => setIsMuted(e.target.checked)} />
+                <span className="slider round"></span>
               </label>
             </div>
           </div>
