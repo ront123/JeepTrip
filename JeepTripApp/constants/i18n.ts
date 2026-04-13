@@ -105,9 +105,9 @@ export const translations = {
     confirm_password: 'CONFIRM PASSWORD',
     passwords_dont_match: 'Passwords do not match.',
     password_updated: 'Password updated successfully.',
-    btn_send_reset: '▶ SEND RESET LINK',
     btn_update_password: '▶ UPDATE PASSWORD',
     msg_password_reset_success: 'Your password has been reset. You can now log in.',
+    tab_help: 'Help',
   },
   he: {
     // Splash
@@ -208,9 +208,9 @@ export const translations = {
     confirm_password: 'אימות סיסמה חדשה',
     passwords_dont_match: 'הסיסמאות אינן תואמות.',
     password_updated: 'הסיסמה עודכנה בהצלחה.',
-    btn_send_reset: '▶ שלח קישור לשחזור',
     btn_update_password: '▶ עדכן סיסמה',
     msg_password_reset_success: 'הסיסמה שונתה בהצלחה. כעת ניתן להתחבר.',
+    tab_help: 'עזרה',
   },
 } as const;
 

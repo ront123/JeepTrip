@@ -20,6 +20,10 @@ export function Navbar() {
         <span className="tab-icon">👤</span>
         <span>{t('tab_profile')}</span>
       </NavLink>
+      <NavLink to="/help" className={({ isActive }) => `tab-bar-item${isActive ? ' active' : ''}`}>
+        <span className="tab-icon">❓</span>
+        <span>{t('tab_help')}</span>
+      </NavLink>
       {isAdmin && (
         <NavLink to="/admin" className={({ isActive }) => `tab-bar-item${isActive ? ' active' : ''}`}>
           <span className="tab-icon">

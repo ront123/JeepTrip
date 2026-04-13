@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JeepTrip - המדריך המלא למשתמש</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700;900&display=swap');
+
+        :root {
+            --bg-dark: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --gold: #c5a059;
+            --cream: #f5f5f7;
+            --sand: #a0a0a0;
+            --border: rgba(197, 160, 89, 0.2);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--cream);
+            font-family: 'Outfit', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 40px;
+            border-bottom: 2px solid var(--gold);
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--gold);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--sand);
+            margin-top: 10px;
+        }
+
+        section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--gold);
+            font-size: 1.8rem;
+            margin-top: 0;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: #ddd;
+        }
+
+        ul, ol {
+            padding-inline-start: 20px;
+        }
+
+        li {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin: 25px 0;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .tip-box {
+            background: rgba(197, 160, 89, 0.1);
+            border-right: 4px solid var(--gold);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .tip-box strong {
+            color: var(--gold);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--sand);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+        }
+
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+            }
+            section {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+            }
+            h1, h2 {
+                color: #8b6b23;
+            }
+            .container {
+                max-width: 100%;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>JeepTrip</h1>
+        <div class="hero-subtitle">המדריך המלא למשתמש 🧭🚙</div>
+    </header>
+
+    <section>
+        <p>ברוכים הבאים ל-<strong>JeepTrip</strong>, המפקדה הדיגיטלית שלכם לניהול משימות וטיולי שטח. המערכת תוכננה במיוחד לנהגי שטח מקצועיים שרוצים לשמור על קשר, לתאם מסלולים ולנהל את השיירה בסטנדרט הגבוה ביותר.</p>
+    </section>
+
+    <section>
+        <h2>🏗️ 1. הרשמה וכניסה למערכת</h2>
+        <p>כדי לשמור על קהילה איכותית ובטוחה, JeepTrip פועלת בשיטת "אישור מנהל".</p>
+        <ol>
+            <li><strong>הרשמה</strong>: מלאו את פרטיכם האישיים ופרטי הרכב.</li>
+            <li><strong>ממתין לאישור</strong>: לאחר ההרשמה, חשבונכם יועבר לבדיקת מנהל מערכת.</li>
+            <li><strong>גישה מלאה</strong>: ברגע שתאושרו, תקבלו גישה לכל יכולות האפליקציה והווב.</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>📊 2. מסך הבית (Headquarters)</h2>
+        <p>כאן הכל מתחיל. מסך הבית מרכז עבורכם את כל מה שחשוב בזמן אמת.</p>
+        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/dashboard_screenshot.png" alt="Dashboard">
+        <ul>
+            <li><strong>סיכום משימות</strong>: צפייה במשימות הקרובות ביותר שלכם.</li>
+            <li><strong>סטטיסטיקה</strong>: מעקב אחרי קילומטראז' מצטבר ושעות שטח (בקרוב).</li>
+            <li><strong>ניווט מהיר</strong>: גישה מהירה ליצירת משימה או פרופיל.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>➕ 3. יצירת משימה חדשה</h2>
+        <p>יש לכם מסלול חדש בראש? פתחו משימה והזמינו את החברים.</p>
+        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/create_mission_screenshot.png" alt="Create Mission">
+        <ol>
+            <li><strong>פרטי המשימה</strong>: תנו כותרת מרשימה, בחרו תאריך ושעה.</li>
+            <li><strong>מיקום</strong>: סמנו את נקודת המפגש על המפה.</li>
+            <li><strong>קובצי מסלול</strong>: העלו קובצי GPX כדי שכולם יראו את הנתיב המדויק.</li>
+            <li><strong>פרטיות</strong>: בחרו אם המשימה תהיה ציבורית או חבויה (רק למוזמנים).</li>
+        </ol>
+    </section>
+
+    <section>
+        <h2>🗺️ 4. בתוך המשימה - מפה ותקשורת</h2>
+        <p>כאן הלב הפועם של JeepTrip. תיאום מושלם לפני ובמהלך הנסיעה.</p>
+        <img src="https://raw.githubusercontent.com/rontoledo/JeepTrip/main/trip_details_screenshot.png" alt="Trip Details">
+        <ul>
+            <li><strong>מפת משימה</strong>: צפייה בתוואי השטח ובמיקום המשתתפים.</li>
+            <li><strong>צאט ייעודי</strong>: שלחו הודעות קוליות, תמונות ועדכונים מהשטח.</li>
+            <li><strong>אישור הגעה (RSVP)</strong>: ראו מי מגיע ומי לא.</li>
+            <li><strong>שיתוף</strong>: שלחו קישור הזמנה מהיר בוואטסאפ.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>⚙️ 5. פרופיל והגדרות</h2>
+        <ul>
+            <li><strong>פרטי רכב</strong>: עדכנו את סוג הג'יפ והשיפורים שלכם.</li>
+            <li><strong>השתקת התראות</strong>: הפעילו את מצב ה-Mute בהגדרות.</li>
+            <li><strong>שפה</strong>: תמיכה מלאה בעברית ובאנגלית.</li>
+        </ul>
+    </section>
+
+    <div class="footer">
+        <p>JeepTrip &copy; 2026 | צאו לשטח ותנו בראש! 🏎️💨</p>
+    </div>
+</div>
+
+</body>
+</html>

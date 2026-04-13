@@ -10,9 +10,14 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Switch,
   KeyboardAvoidingView,
   Modal,
   LogBox,
+  FlatList,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -131,255 +136,261 @@ export default function CreateTripScreen() {
 
         <View style={styles.goldLine} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.formSection}>
-            <Text style={[styles.label, rtlText]}>{isRTL ? 'שם המסע' : 'Trip Title'}</Text>
-            <TextInput
-              style={[styles.input, rtlText]}
-              placeholder={isRTL ? 'למשל: חוצי נגב 2026' : 'e.g. Negev Crossing 2026'}
-              placeholderTextColor={Palette.mud}
-              value={title}
-              onChangeText={setTitle}
-            />
-
-            <Text style={[styles.label, rtlText]}>{isRTL ? 'בחירת יעד להגעה (Google Maps)' : 'Search Destination'}</Text>
-            <GooglePlacesAutocomplete
-              placeholder={isRTL ? 'חפש מקום...' : 'Search for a place...'}
-              fetchDetails={true}
-              onPress={(data, details = null) => {
-                setLocation(data.description);
-                if (details) {
-                  setLat(details.geometry.location.lat.toString());
-                  setLng(details.geometry.location.lng.toString());
-                }
-              }}
-              query={{
-                key: GOOGLE_MAPS_API_KEY,
-                language: isRTL ? 'he' : 'en',
-                components: 'country:il',
-              }}
-              styles={{
-                container: { flex: 0 },
-                textInput: [styles.input, { textAlign: isRTL ? 'right' : 'left' }],
-                listView: { 
-                  position: 'absolute',
-                  top: 50,
-                  backgroundColor: Palette.charcoalMid, 
-                  borderRadius: Radius.md, 
-                  zIndex: 2000,
-                  elevation: 5,
-                  maxHeight: 200,
-                  width: '100%',
-                },
-                row: { backgroundColor: Palette.charcoalMid, padding: 13 },
-                description: { color: Palette.cream },
-              }}
-              enablePoweredByContainer={false}
-              onFail={(error) => {
-                console.error('Google Places Error:', error);
-                Alert.alert('Search Error', 'Could not fetch places. Check your API Key or network connection.');
-              }}
-              textInputProps={{
-                placeholderTextColor: Palette.mud,
-              }}
-            />
-
-            <Text style={[styles.label, rtlText]}>{isRTL ? 'בחירת נקודת התחלה' : 'Search Start Point'}</Text>
-            <GooglePlacesAutocomplete
-              placeholder={isRTL ? 'חפש נקודת מפגש...' : 'Search for meeting point...'}
-              fetchDetails={true}
-              onPress={(data, details = null) => {
-                if (details) {
-                  setStartLat(details.geometry.location.lat.toString());
-                  setStartLng(details.geometry.location.lng.toString());
-                }
-              }}
-              query={{
-                key: GOOGLE_MAPS_API_KEY,
-                language: isRTL ? 'he' : 'en',
-                components: 'country:il',
-              }}
-              styles={{
-                container: { flex: 0 },
-                textInput: [styles.input, { textAlign: isRTL ? 'right' : 'left' }],
-                listView: { 
-                  position: 'absolute',
-                  top: 50,
-                  backgroundColor: Palette.charcoalMid, 
-                  borderRadius: Radius.md, 
-                  zIndex: 1500,
-                  elevation: 5,
-                  maxHeight: 200,
-                  width: '100%',
-                },
-                row: { backgroundColor: Palette.charcoalMid, padding: 13 },
-                description: { color: Palette.cream },
-              }}
-              enablePoweredByContainer={false}
-              onFail={(error) => {
-                console.error('Google Places Error:', error);
-                Alert.alert('Search Error', 'Could not fetch places. Check your API Key or network connection.');
-              }}
-              textInputProps={{
-                placeholderTextColor: Palette.mud,
-              }}
-            />
-
-            <View style={[rowStyle, { gap: Spacing.md }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, rtlText]}>{isRTL ? 'תאריך יציאה' : 'Start Date'}</Text>
-                <TouchableOpacity style={styles.dateSelector} onPress={() => setShowStartPicker(true)}>
-                  <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
-                </TouchableOpacity>
-                {Platform.OS === 'android' && showStartPicker && (
-                  <RNDateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, date) => {
-                      setShowStartPicker(false);
-                      if (date) setStartDate(date);
-                    }}
-                  />
-                )}
-                {Platform.OS === 'ios' && (
-                  <Modal visible={showStartPicker} transparent animationType="fade">
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.pickerContainer}>
-                        <RNDateTimePicker
-                          value={startDate}
-                          mode="date"
-                          display="inline"
-                          onChange={(event, date) => { if (date) setStartDate(date); }}
-                          themeVariant="dark"
-                        />
-                        <TouchableOpacity style={styles.doneBtn} onPress={() => setShowStartPicker(false)}>
-                          <Text style={styles.doneBtnText}>Save Date</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </Modal>
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, rtlText]}>{isRTL ? 'תאריך חזרה' : 'End Date'}</Text>
-                <TouchableOpacity style={styles.dateSelector} onPress={() => setShowEndPicker(true)}>
-                  <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
-                </TouchableOpacity>
-                {Platform.OS === 'android' && showEndPicker && (
-                  <RNDateTimePicker
-                    value={endDate}
-                    mode="date"
-                    display="default"
-                    minimumDate={startDate}
-                    onChange={(event, date) => {
-                      setShowEndPicker(false);
-                      if (date) setEndDate(date);
-                    }}
-                  />
-                )}
-                {Platform.OS === 'ios' && (
-                  <Modal visible={showEndPicker} transparent animationType="fade">
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.pickerContainer}>
-                        <RNDateTimePicker
-                          value={endDate}
-                          mode="date"
-                          display="inline"
-                          minimumDate={startDate}
-                          onChange={(event, date) => { if (date) setEndDate(date); }}
-                          themeVariant="dark"
-                        />
-                        <TouchableOpacity style={styles.doneBtn} onPress={() => setShowEndPicker(false)}>
-                          <Text style={styles.doneBtnText}>Save Date</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </Modal>
-                )}
-              </View>
-            </View>
-
-            <View style={{ flex: 1, marginTop: Spacing.xs }}>
-              <Text style={[styles.label, rtlText]}>{isRTL ? 'שעת מפגש' : 'Meeting Time'}</Text>
-              <TouchableOpacity style={styles.dateSelector} onPress={() => setShowTimePicker(true)}>
-                <Text style={styles.dateValue}>{formatTime(meetingTime)}</Text>
-              </TouchableOpacity>
-              {Platform.OS === 'android' && showTimePicker && (
-                <RNDateTimePicker
-                  value={meetingTime}
-                  mode="time"
-                  is24Hour={true}
-                  display="default"
-                  onChange={(event, date) => {
-                    setShowTimePicker(false);
-                    if (date) setMeetingTime(date);
-                  }}
-                />
-              )}
-              {Platform.OS === 'ios' && (
-                <Modal visible={showTimePicker} transparent animationType="fade">
-                  <View style={styles.modalOverlay}>
-                    <View style={styles.pickerContainer}>
-                      <RNDateTimePicker
-                        value={meetingTime}
-                        mode="time"
-                        display="spinner"
-                        is24Hour={true}
-                        onChange={(event, date) => { if (date) setMeetingTime(date); }}
-                        themeVariant="dark"
-                      />
-                      <TouchableOpacity style={styles.doneBtn} onPress={() => setShowTimePicker(false)}>
-                        <Text style={styles.doneBtnText}>Save Time</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Modal>
-              )}
-            </View>
-
-
-            <Text style={[styles.label, rtlText]}>{isRTL ? 'מכסת משתתפים' : 'Participant Limit'}</Text>
-            <TextInput
-              style={[styles.input, rtlText]}
-              placeholder={isRTL ? 'השאר ריק ללא הגבלה' : 'Unlimited if empty'}
-              placeholderTextColor={Palette.mud}
-              keyboardType="number-pad"
-              value={maxParticipants}
-              onChangeText={setMaxParticipants}
-            />
-
-            <Text style={[styles.label, rtlText]}>{isRTL ? 'קישור למסלול (Offroad / External)' : 'Offroad / External Route Link'}</Text>
-            <TextInput
-              style={[styles.input, rtlText]}
-              placeholder="https://..."
-              placeholderTextColor={Palette.mud}
-              value={offRoadUrl}
-              onChangeText={setOffRoadUrl}
-            />
-
-            <View style={[styles.switchRow, rowStyle]}>
-              <View>
-                <Text style={[styles.label, { marginBottom: 2 }]}>{isRTL ? 'מסע מוסתר' : 'Hidden Trip'}</Text>
-                <Text style={{ color: Palette.sand, fontSize: 10 }}>{isRTL ? 'יוצג רק למי שיקבל הזמנה אישית' : 'Only visible to invitees'}</Text>
-              </View>
-              <Switch
-                value={isHidden}
-                onValueChange={setIsHidden}
-                trackColor={{ false: Palette.charcoalMid, true: Palette.gold }}
-                thumbColor={isHidden ? Palette.cream : Palette.mud}
+        <FlatList
+          data={[]}
+          renderItem={null}
+          ListHeaderComponent={
+            <View style={styles.formSection}>
+              <Text style={[styles.label, rtlText]}>{isRTL ? 'שם המסע' : 'Trip Title'}</Text>
+              <TextInput
+                style={[styles.input, rtlText]}
+                placeholder={isRTL ? 'למשל: חוצי נגב 2026' : 'e.g. Negev Crossing 2026'}
+                placeholderTextColor={Palette.mud}
+                value={title}
+                onChangeText={setTitle}
               />
-            </View>
 
-            <TouchableOpacity style={styles.createBtn} onPress={handleCreate} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color={Palette.charcoal} />
-              ) : (
-                <Text style={styles.createBtnText}>{isRTL ? 'שגר מסע' : 'Launch Mission'}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              <Text style={[styles.label, rtlText]}>{isRTL ? 'בחירת יעד להגעה (Google Maps)' : 'Search Destination'}</Text>
+              <GooglePlacesAutocomplete
+                placeholder={isRTL ? 'חפש מקום...' : 'Search for a place...'}
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  setLocation(data.description);
+                  if (details) {
+                    setLat(details.geometry.location.lat.toString());
+                    setLng(details.geometry.location.lng.toString());
+                  }
+                }}
+                query={{
+                  key: GOOGLE_MAPS_API_KEY,
+                  language: isRTL ? 'he' : 'en',
+                  components: 'country:il',
+                }}
+                styles={{
+                  container: { flex: 0 },
+                  textInput: [styles.input, { textAlign: isRTL ? 'right' : 'left' }],
+                  listView: { 
+                    position: 'absolute',
+                    top: 50,
+                    backgroundColor: Palette.charcoalMid, 
+                    borderRadius: Radius.md, 
+                    zIndex: 2000,
+                    elevation: 5,
+                    maxHeight: 200,
+                    width: '100%',
+                  },
+                  row: { backgroundColor: Palette.charcoalMid, padding: 13 },
+                  description: { color: Palette.cream },
+                }}
+                enablePoweredByContainer={false}
+                onFail={(error) => {
+                  console.error('Google Places Error:', error);
+                  Alert.alert('Search Error', 'Could not fetch places. Check your API Key or network connection.');
+                }}
+                textInputProps={{
+                  placeholderTextColor: Palette.mud,
+                }}
+              />
+
+              <Text style={[styles.label, rtlText]}>{isRTL ? 'בחירת נקודת התחלה' : 'Search Start Point'}</Text>
+              <GooglePlacesAutocomplete
+                placeholder={isRTL ? 'חפש נקודת מפגש...' : 'Search for meeting point...'}
+                fetchDetails={true}
+                onPress={(data, details = null) => {
+                  if (details) {
+                    setStartLat(details.geometry.location.lat.toString());
+                    setStartLng(details.geometry.location.lng.toString());
+                  }
+                }}
+                query={{
+                  key: GOOGLE_MAPS_API_KEY,
+                  language: isRTL ? 'he' : 'en',
+                  components: 'country:il',
+                }}
+                styles={{
+                  container: { flex: 0 },
+                  textInput: [styles.input, { textAlign: isRTL ? 'right' : 'left' }],
+                  listView: { 
+                    position: 'absolute',
+                    top: 50,
+                    backgroundColor: Palette.charcoalMid, 
+                    borderRadius: Radius.md, 
+                    zIndex: 1500,
+                    elevation: 5,
+                    maxHeight: 200,
+                    width: '100%',
+                  },
+                  row: { backgroundColor: Palette.charcoalMid, padding: 13 },
+                  description: { color: Palette.cream },
+                }}
+                enablePoweredByContainer={false}
+                onFail={(error) => {
+                  console.error('Google Places Error:', error);
+                  Alert.alert('Search Error', 'Could not fetch places. Check your API Key or network connection.');
+                }}
+                textInputProps={{
+                  placeholderTextColor: Palette.mud,
+                }}
+              />
+
+              <View style={[rowStyle, { gap: Spacing.md }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, rtlText]}>{isRTL ? 'תאריך יציאה' : 'Start Date'}</Text>
+                  <TouchableOpacity style={styles.dateSelector} onPress={() => setShowStartPicker(true)}>
+                    <Text style={styles.dateValue}>{formatDate(startDate)}</Text>
+                  </TouchableOpacity>
+                  {Platform.OS === 'android' && showStartPicker && (
+                    <RNDateTimePicker
+                      value={startDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, date) => {
+                        setShowStartPicker(false);
+                        if (date) setStartDate(date);
+                      }}
+                    />
+                  )}
+                  {Platform.OS === 'ios' && (
+                    <Modal visible={showStartPicker} transparent animationType="fade">
+                      <View style={styles.modalOverlay}>
+                        <View style={styles.pickerContainer}>
+                          <RNDateTimePicker
+                            value={startDate}
+                            mode="date"
+                            display="inline"
+                            onChange={(event, date) => { if (date) setStartDate(date); }}
+                            themeVariant="dark"
+                          />
+                          <TouchableOpacity style={styles.doneBtn} onPress={() => setShowStartPicker(false)}>
+                            <Text style={styles.doneBtnText}>Save Date</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Modal>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.label, rtlText]}>{isRTL ? 'תאריך חזרה' : 'End Date'}</Text>
+                  <TouchableOpacity style={styles.dateSelector} onPress={() => setShowEndPicker(true)}>
+                    <Text style={styles.dateValue}>{formatDate(endDate)}</Text>
+                  </TouchableOpacity>
+                  {Platform.OS === 'android' && showEndPicker && (
+                    <RNDateTimePicker
+                      value={endDate}
+                      mode="date"
+                      display="default"
+                      minimumDate={startDate}
+                      onChange={(event, date) => {
+                        setShowEndPicker(false);
+                        if (date) setEndDate(date);
+                      }}
+                    />
+                  )}
+                  {Platform.OS === 'ios' && (
+                    <Modal visible={showEndPicker} transparent animationType="fade">
+                      <View style={styles.modalOverlay}>
+                        <View style={styles.pickerContainer}>
+                          <RNDateTimePicker
+                            value={endDate}
+                            mode="date"
+                            display="inline"
+                            minimumDate={startDate}
+                            onChange={(event, date) => { if (date) setEndDate(date); }}
+                            themeVariant="dark"
+                          />
+                          <TouchableOpacity style={styles.doneBtn} onPress={() => setShowEndPicker(false)}>
+                            <Text style={styles.doneBtnText}>Save Date</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </Modal>
+                  )}
+                </View>
+              </View>
+
+              <View style={{ flex: 1, marginTop: Spacing.xs }}>
+                <Text style={[styles.label, rtlText]}>{isRTL ? 'שעת מפגש' : 'Meeting Time'}</Text>
+                <TouchableOpacity style={styles.dateSelector} onPress={() => setShowTimePicker(true)}>
+                  <Text style={styles.dateValue}>{formatTime(meetingTime)}</Text>
+                </TouchableOpacity>
+                {Platform.OS === 'android' && showTimePicker && (
+                  <RNDateTimePicker
+                    value={meetingTime}
+                    mode="time"
+                    is24Hour={true}
+                    display="default"
+                    onChange={(event, date) => {
+                      setShowTimePicker(false);
+                      if (date) setMeetingTime(date);
+                    }}
+                  />
+                )}
+                {Platform.OS === 'ios' && (
+                  <Modal visible={showTimePicker} transparent animationType="fade">
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.pickerContainer}>
+                        <RNDateTimePicker
+                          value={meetingTime}
+                          mode="time"
+                          display="spinner"
+                          is24Hour={true}
+                          onChange={(event, date) => { if (date) setMeetingTime(date); }}
+                          themeVariant="dark"
+                        />
+                        <TouchableOpacity style={styles.doneBtn} onPress={() => setShowTimePicker(false)}>
+                          <Text style={styles.doneBtnText}>Save Time</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
+                )}
+              </View>
+
+
+              <Text style={[styles.label, rtlText]}>{isRTL ? 'מכסת משתתפים' : 'Participant Limit'}</Text>
+              <TextInput
+                style={[styles.input, rtlText]}
+                placeholder={isRTL ? 'השאר ריק ללא הגבלה' : 'Unlimited if empty'}
+                placeholderTextColor={Palette.mud}
+                keyboardType="number-pad"
+                value={maxParticipants}
+                onChangeText={setMaxParticipants}
+              />
+
+              <Text style={[styles.label, rtlText]}>{isRTL ? 'קישור למסלול (Offroad / External)' : 'Offroad / External Route Link'}</Text>
+              <TextInput
+                style={[styles.input, rtlText]}
+                placeholder="https://..."
+                placeholderTextColor={Palette.mud}
+                value={offRoadUrl}
+                onChangeText={setOffRoadUrl}
+              />
+
+              <View style={[styles.switchRow, rowStyle]}>
+                <View>
+                  <Text style={[styles.label, { marginBottom: 2 }]}>{isRTL ? 'מסע מוסתר' : 'Hidden Trip'}</Text>
+                  <Text style={{ color: Palette.sand, fontSize: 10 }}>{isRTL ? 'יוצג רק למי שיקבל הזמנה אישית' : 'Only visible to invitees'}</Text>
+                </View>
+                <Switch
+                  value={isHidden}
+                  onValueChange={setIsHidden}
+                  trackColor={{ false: Palette.charcoalMid, true: Palette.gold }}
+                  thumbColor={isHidden ? Palette.cream : Palette.mud}
+                />
+              </View>
+
+              <TouchableOpacity style={styles.createBtn} onPress={handleCreate} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator color={Palette.charcoal} />
+                ) : (
+                  <Text style={styles.createBtnText}>{isRTL ? 'שגר מסע' : 'Launch Mission'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          }
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        />
       </KeyboardAvoidingView>
     </View>
   );

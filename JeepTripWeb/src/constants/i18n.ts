@@ -92,6 +92,7 @@ export const translations = {
     btn_send_reset: '▶ SEND RESET LINK',
     btn_update_password: '▶ UPDATE PASSWORD',
     msg_password_reset_success: 'Your password has been reset. You can now log in.',
+    tab_help: 'Help',
   },
   he: {
     splash_plan: 'תכנן את המסלול.',
@@ -179,6 +180,7 @@ export const translations = {
     btn_send_reset: '▶ שלח קישור לשחזור',
     btn_update_password: '▶ עדכן סיסמה',
     msg_password_reset_success: 'הסיסמה שונתה בהצלחה. כעת ניתן להתחבר.',
+    tab_help: 'עזרה',
   },
 } as const;
 

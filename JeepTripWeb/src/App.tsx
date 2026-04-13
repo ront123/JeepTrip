@@ -11,6 +11,7 @@ import Admin from './pages/Admin';
 import CreateTrip from './pages/CreateTrip';
 import JoinRoute from './pages/JoinRoute';
 import ResetPassword from './pages/ResetPassword';
+import Help from './pages/Help';
 
 function AppRoutes() {
   const { session, profile, loading } = useAuth();
@@ -67,6 +68,7 @@ function AppRoutes() {
         <Route path="/trips/:id" element={<TripDashboard />} />
         <Route path="/create-trip" element={<CreateTrip />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/help" element={<Help />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/login" element={<Navigate to="/trips" replace />} />
