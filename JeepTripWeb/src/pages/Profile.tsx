@@ -130,46 +130,6 @@ export default function Profile() {
             {isRTL ? 'התנתק מהמערכת' : 'Logout'}
           </button>
 
-          {/* Notification Settings Section */}
-          <div className="card profile-card" style={{ marginTop: 'var(--sp-xl)', border: '1px solid rgba(200, 151, 58, 0.2)' }}>
-            <p className={`form-label ${rtl}`} style={{ color: 'var(--gold)', marginBottom: 12 }}>
-              {isRTL ? 'הגדרות התראות' : 'NOTIFICATION SETTINGS'}
-            </p>
-            
-            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
-              <span>{isRTL ? 'הרשאות דפדפן:' : 'Browser Permissions:'}</span>
-              <span style={{ fontWeight: 600, color: permission === 'granted' ? 'var(--olive-light)' : 'var(--gold)' }}>
-                {permission.toUpperCase()}
-              </span>
-            </div>
-
-            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: 13 }}>
-              <span>{isRTL ? 'חיבור Realtime:' : 'Realtime Status:'}</span>
-              <span style={{ fontWeight: 600, color: connectionStatus === 'connected' ? 'var(--olive-light)' : connectionStatus === 'error' ? 'var(--rust-light)' : 'var(--sand)' }}>
-                {connectionStatus.toUpperCase()}
-              </span>
-            </div>
-
-            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12, opacity: 0.8 }}>
-              <span>{isRTL ? 'טיולים במעקב:' : 'Monitored Trips:'}</span>
-              <span style={{ fontWeight: 600 }}>{monitoredTripCount}</span>
-            </div>
-
-            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
-              <span>{isRTL ? 'מזהה משתמש:' : 'UID:'}</span>
-              <span style={{ fontFamily: 'monospace' }}>...{uid.slice(-6)}</span>
-            </div>
-
-            {permission !== 'granted' ? (
-              <button className="btn btn-gold btn-sm" onClick={requestPermission} style={{ width: '100%' }}>
-                {isRTL ? 'בקש הרשאה' : 'Enable Notifications'}
-              </button>
-            ) : (
-              <button className="btn btn-outline btn-sm" onClick={sendTestNotification} style={{ width: '100%', borderColor: 'var(--gold)', color: 'var(--gold)' }}>
-                {isRTL ? 'שלח הודעת בדיקה' : 'Send Test Notification'}
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>
