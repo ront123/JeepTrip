@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useNotifications } from '../context/NotificationContext';
 import { Modal } from '../components/Modal';
 import { fetchMyTrips } from '../lib/trips';
 import type { Trip } from '../lib/trips';
@@ -24,11 +25,15 @@ function TripCard({ trip, isRTL }: { trip: Trip & { trip_attendees?: any[] }; is
   const attending = (trip.trip_attendees || []).filter((a: any) => a.status === 'attending').length;
   const maybe = (trip.trip_attendees || []).filter((a: any) => a.status === 'maybe').length;
 
+  const { unreadTrips } = useNotifications();
+  const hasUnread = unreadTrips.has(trip.id);
+
   return (
     <div className="trip-card slide-up" onClick={() => navigate(`/trips/${trip.id}`)}>
       <div className={`trip-card-accent ${isClose ? 'urgent' : ''}`} />
       <div className={`trip-card-body ${isRTL ? 'rtl' : ''}`}>
         <div className="trip-card-info">
+          {hasUnread && <div className="unread-badge" />}
           <h3 className={`trip-card-title ${isRTL ? 'text-right' : ''}`}>{trip.title}</h3>
           <div className={`trip-meta-row ${isRTL ? 'rtl' : ''}`}>
             <span>📍</span>

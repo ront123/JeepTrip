@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useNotifications } from '../context/NotificationContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { fetchTrip, upsertRSVP } from '../lib/trips';
@@ -41,10 +42,12 @@ export default function TripDashboard() {
   const [showTemplates, setShowTemplates] = useState(false);
 
   // Chat
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const { unreadTrips, markAsRead, setActiveTrip, setActiveTab: setGlobalActiveTab } = useNotifications();
+  
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeTabRef = useRef(activeTab);
@@ -122,12 +125,18 @@ export default function TripDashboard() {
     };
   }, []);
 
-  // Handle unread dot clear when switching to chat tab
+  // Sync active trip and tab to global context for notification silencing
   useEffect(() => {
-    if (activeTab === 'chat') {
-      setHasUnreadMessages(false);
+    setActiveTrip(tripId || null);
+    return () => setActiveTrip(null);
+  }, [tripId]);
+
+  useEffect(() => {
+    setGlobalActiveTab(activeTab);
+    if (activeTab === 'chat' && tripId) {
+      markAsRead(tripId);
     }
-  }, [activeTab]);
+  }, [activeTab, tripId]);
 
   // Real-time Subscriptions
   useEffect(() => {
@@ -141,21 +150,7 @@ export default function TripDashboard() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, (payload) => {
         const newMsgFormatted = formatNewMessage(payload.new);
         
-        // Show red dot and notification if user is not on chat tab OR window is blurred
-        if (activeTabRef.current !== 'chat' || document.hidden) {
-          if (newMsgFormatted.sender_id !== userIdRef.current) {
-            setHasUnreadMessages(true);
-            
-            // Browser notification
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(`🚙 ${tripTitleRef.current || 'JeepTrip'}`, {
-                body: `${newMsgFormatted.users?.full_name || 'User'}: ${newMsgFormatted.content || (newMsgFormatted.media_type === 'image' ? '📷 Photo' : '🎥 Video')}`,
-                icon: '/jeep.svg'
-              });
-            }
-          }
-        }
-
+        // Message rendering is still handled here locally to update the current chat view
         setMessages(prev => {
           if (prev.some(m => m.id === newMsgFormatted.id)) return prev;
           return [...prev, newMsgFormatted];
@@ -593,7 +588,7 @@ export default function TripDashboard() {
             <div className="dash-tab-content">
               <span>{tab === 'overview' ? '📋' : tab === 'navigation' ? '🧭' : tab === 'logistics' ? '🏕️' : '💬'}</span>
               <span>{t(`trip_${tab}` as any)}</span>
-              {tab === 'chat' && hasUnreadMessages && <div className="dash-tab-badge" />}
+              {tab === 'chat' && tripId && unreadTrips.has(tripId) && <div className="dash-tab-badge" />}
             </div>
           </button>
         ))}

@@ -88,6 +88,15 @@
 .fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(200, 151, 58, 0.6); }
 .fab:active { transform: scale(0.95); }
 
-/* Modal actions */
-.modal-actions { display: flex; gap: var(--sp-md); margin-top: var(--sp-lg); }
-.modal-actions.rtl { flex-direction: row-reverse; }
+/* Unread badge */
+.trip-card-info { position: relative; }
+.unread-badge {
+  position: absolute;
+  top: 0; right: 0;
+  width: 10px; height: 10px;
+  background: var(--rust);
+  border-radius: 50%;
+  border: 1.5px solid var(--charcoal-mid);
+  box-shadow: 0 0 5px rgba(184, 75, 42, 0.5);
+}
+.rtl .unread-badge { right: auto; left: 0; }
