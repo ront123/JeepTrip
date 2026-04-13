@@ -155,12 +155,12 @@ export default function Profile() {
               <span style={{ fontWeight: 600 }}>{monitoredTripCount}</span>
             </div>
 
-            <div className=\"debug-row\" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
+            <div className="debug-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, fontSize: 11, opacity: 0.6 }}>
               <span>{isRTL ? 'מזהה משתמש:' : 'Debug UID:'}</span>
               <span style={{ fontFamily: 'monospace' }}>...{uid.slice(-6)}</span>
             </div>
 
-            <div className=\"debug-row\" style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(200, 151, 58, 0.1)' }}>
+            <div className="debug-row" style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(200, 151, 58, 0.1)' }}>
               <p style={{ fontSize: 10, color: 'var(--gold)', marginBottom: 4 }}>LIVE EVENT LOG:</p>
               <div style={{
                 backgroundColor: 'rgba(0,0,0,0.3)',
