@@ -57,7 +57,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const requestPermission = async () => {
     if (!('Notification' in window)) {
-      alert(isRTL ? 'הדפדפן שלך לא תומך בהתראות. וודא שאתה גולש בקישור מאובטח (HTTPS) או נסה דפדפן אחר.' : 'Your browser does not support desktop notifications. Ensure you are using HTTPS or try a different browser.');
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        alert(isRTL 
+          ? 'במכשירי iPhone/iPad יש להוסיף את האתר למסך הבית ("הוסף למסך הבית") ולפתוח אותו משם כדי לאפשר התראות.' 
+          : 'On iOS, you must "Add to Home Screen" and open the app from there to enable notifications.');
+      } else if (!window.isSecureContext) {
+        alert(isRTL 
+          ? 'התראות דורשות חיבור מאובטח (HTTPS). וודא שכתובת האתר מתחילה ב-https://.' 
+          : 'Notifications require a secure context (HTTPS). please ensure your URL starts with https://.');
+      } else {
+        alert(isRTL 
+          ? 'הדפדפן שלך לא תומך בהתראות או שהן חסומות בהגדרות המערכת.' 
+          : 'Your browser does not support notifications or they are disabled in system settings.');
+      }
       return;
     }
     try {
