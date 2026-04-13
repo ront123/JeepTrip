@@ -103,26 +103,6 @@ export default function TripDashboard() {
     init();
   }, [tripId, loadTrip, loadLogistics]);
 
-  // Request Notification permission via user gesture
-  useEffect(() => {
-    const handleGesture = () => {
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
-      }
-      // Remove after first interaction
-      window.removeEventListener('click', handleGesture);
-      window.removeEventListener('touchstart', handleGesture);
-    };
-
-    window.addEventListener('click', handleGesture);
-    window.addEventListener('touchstart', handleGesture);
-    return () => {
-      window.removeEventListener('click', handleGesture);
-      window.removeEventListener('touchstart', handleGesture);
-    };
-  }, []);
 
   // Sync active trip and tab to global context for notification silencing
   useEffect(() => {

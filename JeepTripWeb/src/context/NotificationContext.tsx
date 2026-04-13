@@ -8,6 +8,8 @@ interface NotificationContextType {
   markAsRead: (tripId: string) => void;
   setActiveTrip: (tripId: string | null) => void;
   setActiveTab: (tab: string) => void;
+  permission: NotificationPermission;
+  requestPermission: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -17,6 +19,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [unreadTrips, setUnreadTrips] = useState<Set<string>>(new Set());
   const [activeTripId, _setActiveTrip] = useState<string | null>(null);
   const [activeTab, _setActiveTab] = useState<string>('overview');
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
+  );
   
   const activeTripIdRef = useRef<string | null>(null);
   const activeTabRef = useRef<string>('overview');
@@ -37,6 +42,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       next.delete(tripId);
       return next;
     });
+  };
+
+  const requestPermission = async () => {
+    if (!('Notification' in window)) return;
+    const res = await Notification.requestPermission();
+    setPermission(res);
   };
 
   // Global Realtime Listener
@@ -93,23 +104,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setupListener();
 
-    // Permission request on first interaction (already handled in TripDashboard but good to have here too)
-    const handleGesture = () => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-      window.removeEventListener('click', handleGesture);
-    };
-    window.addEventListener('click', handleGesture);
-
     return () => {
       if (channel) supabase.removeChannel(channel);
-      window.removeEventListener('click', handleGesture);
     };
   }, [user]);
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, markAsRead, setActiveTrip, setActiveTab }}>
+    <NotificationContext.Provider value={{ unreadTrips, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission }}>
       {children}
     </NotificationContext.Provider>
   );

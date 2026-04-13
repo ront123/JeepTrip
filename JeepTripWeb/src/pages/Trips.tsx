@@ -65,6 +65,7 @@ export default function Trips() {
   const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
+  const { unreadTrips, permission, requestPermission } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -110,6 +111,21 @@ export default function Trips() {
         </div>
       </div>
       <div className="gold-line" />
+      
+      {permission === 'default' && (
+        <div className="notification-banner slide-up">
+          <div className="notification-banner-content">
+            <span style={{ fontSize: 20 }}>🔔</span>
+            <div className="notification-banner-text">
+              <p className="banner-title">{isRTL ? 'הפעל התראות' : 'Enable Notifications'}</p>
+              <p className="banner-sub">{isRTL ? 'קבל עדכונים על הודעות חדשות מהקבוצה' : 'Stay updated with new messages from the crew'}</p>
+            </div>
+            <button className="btn btn-gold btn-sm" onClick={requestPermission} style={{ width: 'auto' }}>
+              {isRTL ? 'אשר' : 'Enable'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="screen-content">
