@@ -19,6 +19,8 @@ interface NotificationContextType {
   sendTestNotification: () => void;
   monitoredTripCount: number;
   uid: string;
+  isMuted: boolean;
+  setIsMuted: (muted: boolean) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -32,6 +34,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [activeTab, _setActiveTab] = useState<string>('overview');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
   const [monitoredTripCount, setMonitoredTripCount] = useState(0);
+  const [isMuted, _setIsMuted] = useState<boolean>(
+    typeof window !== 'undefined' ? localStorage.getItem('notif_muted') === 'true' : false
+  );
+  
+  const setIsMuted = (muted: boolean) => {
+    _setIsMuted(muted);
+    localStorage.setItem('notif_muted', muted.toString());
+  };
+
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
@@ -153,7 +164,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                   const title = tripTitles.current[tid] || 'JeepTrip';
                   new window.Notification(`🚙 ${title}`, { 
                     body: `${newMsg.content || 'New media message'}`, 
-                    icon: '/jeep.svg' 
+                    icon: '/jeep.svg',
+                    silent: isMuted 
                   });
                 }
               }
@@ -173,7 +185,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               if (payload.new.status === 'pending') {
                 setPendingCount(prev => prev + 1);
                 if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
-                  new window.Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
+                  new window.Notification('🎫 New Join Request', { 
+                    body: `${payload.new.full_name} wants to join the crew`, 
+                    icon: '/jeep.svg',
+                    silent: isMuted
+                  });
                 }
               }
             })
@@ -206,7 +222,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     <NotificationContext.Provider value={{ 
       unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, 
       permission, requestPermission, connectionStatus, sendTestNotification,
-      monitoredTripCount, uid: user?.id || ''
+      monitoredTripCount, uid: user?.id || '', isMuted, setIsMuted
     }}>
       {children}
     </NotificationContext.Provider>

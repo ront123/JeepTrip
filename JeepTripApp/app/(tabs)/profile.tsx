@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, TextInput, Alert, ScrollView, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
@@ -7,9 +7,11 @@ import { Palette, Typography, Spacing, Radius } from '@/constants/theme';
 import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { fetchUserProfile } from '@/lib/auth';
+import { useNotifications } from '@/context/NotificationContext';
 
 export default function ProfileScreen() {
   const { t, isRTL } = useLanguage();
+  const { isMuted, setIsMuted } = useNotifications();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -135,6 +137,19 @@ export default function ProfileScreen() {
             <View style={styles.card}>
               <Text style={[styles.label, rtlText]}>{isRTL ? 'תפקיד' : 'ROLE'}</Text>
               <Text style={[styles.value, rtlText]}>🛡️ {isRTL && profile?.role === 'admin' ? 'מנהל' : profile?.role?.toUpperCase()}</Text>
+            </View>
+
+            <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+              <View>
+                <Text style={[styles.label, rtlText]}>{isRTL ? 'השתק התראות' : 'MUTE NOTIFICATIONS'}</Text>
+                <Text style={[styles.value, { fontSize: Typography.sm }]}>{isRTL ? 'השתקת צליל והתראות' : 'Silence sound and alerts'}</Text>
+              </View>
+              <Switch
+                value={isMuted}
+                onValueChange={setIsMuted}
+                trackColor={{ false: Palette.charcoalLight, true: Palette.gold }}
+                thumbColor={Platform.OS === 'ios' ? undefined : (isMuted ? Palette.cream : Palette.mud)}
+              />
             </View>
           </>
         )}

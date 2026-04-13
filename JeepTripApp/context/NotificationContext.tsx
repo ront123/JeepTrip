@@ -3,20 +3,25 @@ import * as Notifications from 'expo-notifications';
 import { supabase } from '@/lib/supabase';
 import { fetchMyTrips } from '@/lib/trips';
 import { AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface NotificationContextType {
   unreadTrips: Set<string>;
   pendingCount: number;
   markAsRead: (tripId: string) => void;
   connectionStatus: 'loading' | 'connected' | 'error';
+  isMuted: boolean;
+  setIsMuted: (muted: boolean) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
+const isMutedRef = { current: false };
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: true,
+    shouldPlaySound: !isMutedRef.current,
     shouldSetBadge: true,
   }),
 });
@@ -26,9 +31,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [pendingCount, setPendingCount] = useState(0);
   const [connectionStatus, setConnectionStatus] = useState<'loading' | 'connected' | 'error'>('loading');
   const [userId, setUserId] = useState<string | null>(null);
+  const [isMuted, _setIsMuted] = useState(false);
   
   const userTripIds = useRef<Set<string>>(new Set());
   const appState = useRef(AppState.currentState);
+
+  // 0. Load mute setting
+  useEffect(() => {
+    AsyncStorage.getItem('notif_muted').then(val => {
+      const muted = val === 'true';
+      _setIsMuted(muted);
+      isMutedRef.current = muted;
+    });
+  }, []);
+
+  const setIsMuted = async (muted: boolean) => {
+    _setIsMuted(muted);
+    isMutedRef.current = muted;
+    await AsyncStorage.setItem('notif_muted', muted.toString());
+  };
 
   // 1. AppState listener
   useEffect(() => {
@@ -155,7 +176,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, connectionStatus }}>
+    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, connectionStatus, isMuted, setIsMuted }}>
       {children}
     </NotificationContext.Provider>
   );
