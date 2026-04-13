@@ -99,6 +99,15 @@ export const translations = {
     btn_cancel: 'Cancel',
     btn_save: 'Save',
     manager_badge: 'Manager',
+    forgot_password: 'Forgot Password?',
+    reset_link_sent: 'Reset link sent to your email.',
+    new_password: 'NEW PASSWORD',
+    confirm_password: 'CONFIRM PASSWORD',
+    passwords_dont_match: 'Passwords do not match.',
+    password_updated: 'Password updated successfully.',
+    btn_send_reset: '▶ SEND RESET LINK',
+    btn_update_password: '▶ UPDATE PASSWORD',
+    msg_password_reset_success: 'Your password has been reset. You can now log in.',
   },
   he: {
     // Splash
@@ -193,6 +202,15 @@ export const translations = {
     btn_cancel: 'ביטול',
     btn_save: 'שמור קבוצה',
     manager_badge: 'מנהל',
+    forgot_password: 'שכחתי סיסמה?',
+    reset_link_sent: 'קישור לשחזור נשלח לאימייל שלך.',
+    new_password: 'סיסמה חדשה',
+    confirm_password: 'אימות סיסמה חדשה',
+    passwords_dont_match: 'הסיסמאות אינן תואמות.',
+    password_updated: 'הסיסמה עודכנה בהצלחה.',
+    btn_send_reset: '▶ שלח קישור לשחזור',
+    btn_update_password: '▶ עדכן סיסמה',
+    msg_password_reset_success: 'הסיסמה שונתה בהצלחה. כעת ניתן להתחבר.',
   },
 } as const;
 

@@ -16,6 +16,8 @@ export default function Login() {
   const [vehicle, setVehicle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showingForgot, setShowingForgot] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   useEffect(() => {
     // Check for errors in the URL (from OAuth redirects)
     const params = new URLSearchParams(window.location.search);
@@ -81,18 +83,21 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
-  const handleOAuth = async (provider: 'google' | 'apple') => {
+    }
+  };
+
+  const handleResetRequest = async () => {
+    if (!email) { setError(t('error_fill_all')); return; }
     setLoading(true); setError('');
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: window.location.origin + '/trips'
-        }
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
       });
-      if (error) throw error;
-    } catch {
-      setError(t('error_unknown'));
+      if (resetError) throw resetError;
+      setResetSent(true);
+    } catch (err: any) {
+      setError(err.message || t('error_unknown'));
+    } finally {
       setLoading(false);
     }
   };
@@ -176,44 +181,64 @@ export default function Login() {
         />
 
         {error && <p className="login-error">{error}</p>}
+        {resetSent && <p className="login-success" style={{ color: 'var(--olive-light)', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>{t('reset_link_sent')}</p>}
 
-        <button
-          id="login-submit"
-          className="btn btn-gold"
-          onClick={tab === 'login' ? handleLogin : handleRegister}
-          disabled={loading}
-        >
-          {loading ? <span className="spinner spinner-sm" /> : (tab === 'login' ? t('cta_enter') : t('cta_request'))}
-        </button>
+        {showingForgot ? (
+          <>
+            <button
+              className="btn btn-gold"
+              onClick={handleResetRequest}
+              disabled={loading}
+              style={{ marginBottom: 12 }}
+            >
+              {loading ? <span className="spinner spinner-sm" /> : t('btn_send_reset')}
+            </button>
+            <div className="login-switch-mode" onClick={() => { setShowingForgot(false); setResetSent(false); setError(''); }}>
+              {isRTL ? 'חזרה להתחברות' : 'Back to Login'}
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              id="login-submit"
+              className="btn btn-gold"
+              onClick={tab === 'login' ? handleLogin : handleRegister}
+              disabled={loading}
+            >
+              {loading ? <span className="spinner spinner-sm" /> : (tab === 'login' ? t('cta_enter') : t('cta_request'))}
+            </button>
 
-        <div className="login-or-row">
-          <div className="login-or-line" />
-          <span className="login-or-text">{t('or')}</span>
-          <div className="login-or-line" />
-        </div>
+            {tab === 'login' && (
+              <div 
+                className="login-forgot-link" 
+                onClick={() => { setShowingForgot(true); setError(''); }}
+              >
+                {t('forgot_password')}
+              </div>
+            )}
 
-        <button
-          className="btn btn-outline"
-          onClick={() => handleOAuth('google')}
-          disabled={loading}
-          style={{ marginBottom: 12, borderColor: '#3A3A32', background: 'var(--charcoal-light)' }}
-        >
-          {t('google_login')}
-        </button>
-        {/* <button
-          className="btn btn-outline"
-          onClick={() => handleOAuth('apple')}
-          disabled={loading}
-          style={{ borderColor: '#3A3A32', background: 'var(--charcoal-light)' }}
-        >
-          {t('apple_login')}
-        </button> */}
+            <div className="login-or-row">
+              <div className="login-or-line" />
+              <span className="login-or-text">{t('or')}</span>
+              <div className="login-or-line" />
+            </div>
 
-        <div className="login-switch-mode" onClick={() => setTab(tab === 'login' ? 'register' : 'login')}>
-          {tab === 'login' 
-            ? (isRTL ? 'אין לך חשבון? הירשם כאן' : "Don't have an account? Register here")
-            : (isRTL ? 'כבר יש לך חשבון? התחבר' : "Already have an account? Log in")}
-        </div>
+            <button
+              className="btn btn-outline"
+              onClick={() => handleOAuth('google')}
+              disabled={loading}
+              style={{ marginBottom: 12, borderColor: '#3A3A32', background: 'var(--charcoal-light)' }}
+            >
+              {t('google_login')}
+            </button>
+            
+            <div className="login-switch-mode" onClick={() => setTab(tab === 'login' ? 'register' : 'login')}>
+              {tab === 'login' 
+                ? (isRTL ? 'אין לך חשבון? הירשם כאן' : "Don't have an account? Register here")
+                : (isRTL ? 'כבר יש לך חשבון? התחבר' : "Already have an account? Log in")}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Footer */}

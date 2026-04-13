@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import CreateTrip from './pages/CreateTrip';
 import JoinRoute from './pages/JoinRoute';
+import ResetPassword from './pages/ResetPassword';
 
 function AppRoutes() {
   const { session, profile, loading } = useAuth();
@@ -35,6 +36,7 @@ function AppRoutes() {
         <Routes>
           <Route path="/join/:token" element={<JoinRoute />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pending" element={<Pending />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
@@ -48,6 +50,7 @@ function AppRoutes() {
       <div className={`app-shell ${isRTL ? 'rtl' : ''}`}>
         <Routes>
           <Route path="/join/:token" element={<JoinRoute />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/pending" element={<Pending />} />
           <Route path="*" element={<Navigate to="/pending" replace />} />
         </Routes>
@@ -65,6 +68,7 @@ function AppRoutes() {
         <Route path="/create-trip" element={<CreateTrip />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/login" element={<Navigate to="/trips" replace />} />
         <Route path="*" element={<Navigate to="/trips" replace />} />
       </Routes>

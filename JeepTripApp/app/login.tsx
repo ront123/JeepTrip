@@ -29,7 +29,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const { height } = Dimensions.get('window');
 
-type Mode = 'login' | 'register';
+type Mode = 'login' | 'register' | 'forgot';
 
 export default function LoginScreen() {
   const { t, isRTL } = useLanguage();
@@ -40,6 +40,7 @@ export default function LoginScreen() {
   const [vehicle, setVehicle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -58,7 +59,12 @@ export default function LoginScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!email || !password) {
+    if (mode !== 'forgot' && (!email || !password)) {
+      setError(t('error_fill_all'));
+      shake();
+      return;
+    }
+    if (mode === 'forgot' && !email) {
       setError(t('error_fill_all'));
       shake();
       return;
@@ -68,7 +74,13 @@ export default function LoginScreen() {
     setError('');
 
     try {
-      if (mode === 'register') {
+      if (mode === 'forgot') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: Linking.createURL('/reset-password'),
+        });
+        if (resetError) throw resetError;
+        setResetSent(true);
+      } else if (mode === 'register') {
         await registerUser({ email, password, fullName, vehicleDetails: vehicle });
         router.replace('/pending' as any);
       } else {
@@ -215,29 +227,31 @@ export default function LoginScreen() {
           <View style={[styles.header, isRTL && styles.headerRTL]}>
             <Text style={[styles.logoText, rtlText]}>🚙 JeepTrip</Text>
             <Text style={[styles.heroLine, rtlText]}>
-              {mode === 'login' ? (isRTL ? 'ברוכים הבאים' : 'Welcome') : (isRTL ? 'הצטרפות לצוות' : 'Join the Crew')}
+              {mode === 'login' ? (isRTL ? 'ברוכים הבאים' : 'Welcome') : mode === 'register' ? (isRTL ? 'הצטרפות לצוות' : 'Join the Crew') : (isRTL ? 'שחזור סיסמה' : 'Reset Password')}
             </Text>
           </View>
 
           {/* Toggle */}
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === 'login' && styles.toggleBtnActive]}
-              onPress={() => switchMode('login')}
-            >
-              <Text style={[styles.toggleText, mode === 'login' && styles.toggleTextActive]}>
-                {t('tab_login')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === 'register' && styles.toggleBtnActive]}
-              onPress={() => switchMode('register')}
-            >
-              <Text style={[styles.toggleText, mode === 'register' && styles.toggleTextActive]}>
-                {t('tab_register')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {mode !== 'forgot' && (
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, mode === 'login' && styles.toggleBtnActive]}
+                onPress={() => switchMode('login')}
+              >
+                <Text style={[styles.toggleText, mode === 'login' && styles.toggleTextActive]}>
+                  {t('tab_login')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, mode === 'register' && styles.toggleBtnActive]}
+                onPress={() => switchMode('register')}
+              >
+                <Text style={[styles.toggleText, mode === 'register' && styles.toggleTextActive]}>
+                  {t('tab_register')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Form Card */}
           <Animated.View style={[styles.card, { transform: [{ translateX: shakeAnim }] }]}>
@@ -284,20 +298,29 @@ export default function LoginScreen() {
               />
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, rtlText]}>{t('label_password')}</Text>
-              <TextInput
-                style={[styles.input, isRTL && styles.inputRTL]}
-                placeholder={t('placeholder_password')}
-                placeholderTextColor={Palette.mud}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                textAlign="left"
-              />
-            </View>
+            {mode !== 'forgot' && (
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, rtlText]}>{t('label_password')}</Text>
+                <TextInput
+                  style={[styles.input, isRTL && styles.inputRTL]}
+                  placeholder={t('placeholder_password')}
+                  placeholderTextColor={Palette.mud}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  textAlign="left"
+                />
+              </View>
+            )}
+
+            {mode === 'login' && (
+              <TouchableOpacity style={styles.forgotBtn} onPress={() => setMode('forgot')}>
+                <Text style={styles.forgotText}>{t('forgot_password')}</Text>
+              </TouchableOpacity>
+            )}
 
             {error ? <Text style={[styles.errorText, rtlText]}>⚠ {error}</Text> : null}
+            {resetSent ? <Text style={[styles.successText, rtlText]}>✔ {t('reset_link_sent')}</Text> : null}
 
             <TouchableOpacity
               style={styles.cta}
@@ -306,20 +329,26 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <LinearGradient
-                colors={[Palette.oliveMid, Palette.olive]}
+                colors={mode === 'forgot' ? [Palette.gold, Palette.gold] : [Palette.oliveMid, Palette.olive]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.ctaGradient}
               >
                 {loading ? (
-                  <ActivityIndicator color={Palette.cream} />
+                  <ActivityIndicator color={Palette.charcoal} />
                 ) : (
-                  <Text style={styles.ctaText}>
-                    {mode === 'login' ? t('cta_enter') : t('cta_request')}
+                  <Text style={[styles.ctaText, mode === 'forgot' && { color: Palette.charcoal }]}>
+                    {mode === 'login' ? t('cta_enter') : mode === 'register' ? t('cta_request') : t('btn_send_reset')}
                   </Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
+            
+            {mode === 'forgot' && (
+              <TouchableOpacity style={styles.switchLink} onPress={() => setMode('login')}>
+                <Text style={styles.switchLinkText}>{isRTL ? 'חזרה להתחברות' : 'Back to Login'}</Text>
+              </TouchableOpacity>
+            )}
 
             <View style={styles.orRow}>
               <View style={styles.orLine} />
@@ -473,6 +502,36 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     marginBottom: Spacing.sm,
     letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  successText: {
+    color: Palette.olive,
+    fontSize: Typography.sm,
+    marginBottom: Spacing.sm,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  forgotBtn: {
+    marginBottom: Spacing.md,
+    alignItems: 'center',
+  },
+  forgotText: {
+    color: Palette.sand,
+    fontSize: 13,
+    textDecorationLine: 'underline',
+    opacity: 0.8,
+  },
+  switchLink: {
+    marginTop: Spacing.lg,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  switchLinkText: {
+    color: Palette.gold,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   cta: { borderRadius: Radius.md, overflow: 'hidden', marginTop: Spacing.sm },
   ctaGradient: {

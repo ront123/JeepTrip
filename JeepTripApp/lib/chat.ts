@@ -75,6 +75,16 @@ export async function sendMessage(tripId: string, content: string, mediaUrl: str
     });
 
   if (error) throw new Error(error.message);
+
+  const { data: insertedData } = await supabase
+    .from('trip_messages')
+    .select(`*, users:sender_id (full_name)`)
+    .eq('sender_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  return insertedData;
 }
 
 /** Fetch private messages */

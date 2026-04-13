@@ -44,8 +44,16 @@ export default function TripDashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeTabRef = useRef(activeTab);
+  const userIdRef = useRef(userId);
+  const tripTitleRef = useRef(trip?.title);
+
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+  useEffect(() => { tripTitleRef.current = trip?.title; }, [trip?.title]);
 
   const getSenderName = (senderId: string) => {
     const attendee = trip?.trip_attendees?.find((a: any) => a.user_id === senderId);
@@ -93,6 +101,34 @@ export default function TripDashboard() {
     init();
   }, [tripId, loadTrip, loadLogistics]);
 
+  // Request Notification permission via user gesture
+  useEffect(() => {
+    const handleGesture = () => {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+      // Remove after first interaction
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+    };
+
+    window.addEventListener('click', handleGesture);
+    window.addEventListener('touchstart', handleGesture);
+    return () => {
+      window.removeEventListener('click', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+    };
+  }, []);
+
+  // Handle unread dot clear when switching to chat tab
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setHasUnreadMessages(false);
+    }
+  }, [activeTab]);
+
   // Real-time Subscriptions
   useEffect(() => {
     if (!tripId) return;
@@ -104,6 +140,22 @@ export default function TripDashboard() {
     const chatSub = supabase.channel(`chat:${tripId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, (payload) => {
         const newMsgFormatted = formatNewMessage(payload.new);
+        
+        // Show red dot and notification if user is not on chat tab OR window is blurred
+        if (activeTabRef.current !== 'chat' || document.hidden) {
+          if (newMsgFormatted.sender_id !== userIdRef.current) {
+            setHasUnreadMessages(true);
+            
+            // Browser notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(`🚙 ${tripTitleRef.current || 'JeepTrip'}`, {
+                body: `${newMsgFormatted.users?.full_name || 'User'}: ${newMsgFormatted.content || (newMsgFormatted.media_type === 'image' ? '📷 Photo' : '🎥 Video')}`,
+                icon: '/jeep.svg'
+              });
+            }
+          }
+        }
+
         setMessages(prev => {
           if (prev.some(m => m.id === newMsgFormatted.id)) return prev;
           return [...prev, newMsgFormatted];
@@ -111,13 +163,32 @@ export default function TripDashboard() {
       })
       .subscribe();
 
-    return () => { 
-      supabase.removeChannel(logSub); 
-      supabase.removeChannel(chatSub); 
+    return () => {
+      supabase.removeChannel(logSub);
+      supabase.removeChannel(chatSub);
     };
-  }, [tripId, trip?.trip_attendees]);
+  }, [tripId]);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Scroll logic
+  // 1. Instant scroll when entering tab
+  useEffect(() => {
+    if (activeTab === 'chat' && messages.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [activeTab]);
+
+  // 2. Smooth scroll when messages arrive
+  useEffect(() => {
+    if (activeTab === 'chat' && messages.length > 0) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const scrollToBottom = (instant = false) => {
+    if (activeTab === 'chat') {
+      chatEndRef.current?.scrollIntoView({ behavior: instant ? 'auto' : 'smooth' });
+    }
+  };
 
   const handleRsvp = async (status: 'attending' | 'not_attending' | 'maybe') => {
     if (!tripId || !userId) return;
@@ -146,8 +217,41 @@ export default function TripDashboard() {
   const handleSendMsg = async () => {
     if (!newMsg.trim() || !tripId) return;
     const msgText = newMsg.trim();
+    const tempId = Date.now().toString();
+
+    // 1. Optimistic Update
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      trip_id: tripId,
+      sender_id: userId,
+      content: msgText,
+      media_url: null,
+      media_type: null,
+      image_url: null,
+      created_at: new Date().toISOString(),
+      users: { full_name: t('you' as any) || 'You' }
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
     setNewMsg('');
-    await sendMessage(tripId, msgText);
+
+    try {
+      const sentMsg = await sendMessage(tripId, msgText);
+      // 2. Replace optimistic message with real message
+      setMessages(prev => {
+        const alreadyExists = prev.some(m => m.id === sentMsg.id);
+        if (alreadyExists) {
+          return prev.filter(m => m.id !== tempId);
+        }
+        return prev.map(m => m.id === tempId ? sentMsg : m);
+      });
+    } catch (err: any) {
+      console.error(err);
+      alert(isRTL ? 'שגיאה בשליחה. נסה שוב.' : 'Error sending message. Please try again.');
+      // 3. Revert and restore text
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMsg(msgText);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,8 +541,8 @@ export default function TripDashboard() {
               <div className={`msg-bubble ${isMe ? 'me' : 'other'}`}>
                 {mediaUrl && (
                   isVideo
-                    ? <video src={mediaUrl} controls style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
-                    : <img src={mediaUrl} alt="media" style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
+                    ? <video src={mediaUrl} controls onLoadedData={() => scrollToBottom()} style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
+                    : <img src={mediaUrl} alt="media" onLoad={() => scrollToBottom()} style={{ width: 200, borderRadius: 8, display: 'block', marginBottom: msg.content ? 8 : 0 }} />
                 )}
                 {msg.content && <p className="msg-text">{msg.content}</p>}
               </div>
@@ -486,8 +590,11 @@ export default function TripDashboard() {
       <div className="dash-tabs" style={{ flexDirection: row as any }}>
         {(['overview', 'navigation', 'logistics', 'chat'] as TabType[]).map(tab => (
           <button key={tab} className={`dash-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-            <span>{tab === 'overview' ? '📋' : tab === 'navigation' ? '🧭' : tab === 'logistics' ? '🏕️' : '💬'}</span>
-            <span>{t(`trip_${tab}` as any)}</span>
+            <div className="dash-tab-content">
+              <span>{tab === 'overview' ? '📋' : tab === 'navigation' ? '🧭' : tab === 'logistics' ? '🏕️' : '💬'}</span>
+              <span>{t(`trip_${tab}` as any)}</span>
+              {tab === 'chat' && hasUnreadMessages && <div className="dash-tab-badge" />}
+            </div>
           </button>
         ))}
       </div>

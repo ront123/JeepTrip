@@ -15,7 +15,10 @@ import {
   Image,
   Modal,
   Share,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import * as Clipboard from 'expo-clipboard';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
@@ -37,6 +40,15 @@ import { fetchLogistics, addLogisticsItem, toggleItemCompletion, updateLogistics
 import { fetchMessages, sendMessage, ChatMessage, uploadMediaFile } from '@/lib/chat';
 
 type TabType = 'overview' | 'navigation' | 'logistics' | 'chat';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 const VideoMessage = React.memo(({ url, style }: { url: string; style: any }) => {
   const player = useVideoPlayer(url, (player) => {
@@ -73,7 +85,7 @@ const LogisticsItemRow = React.memo(({ item, isRTL, handleEditRequest }: any) =>
   );
 });
 
-const ChatMessageItem = React.memo(({ item, userId, isRTL, handleDownloadMedia }: any) => {
+const ChatMessageItem = React.memo(({ item, userId, isRTL, handleDownloadMedia, onMediaLoad }: any) => {
   const isMe = item.user_id === userId || item.sender_id === userId;
   const mediaUrl = item.media_url || item.image_url;
   const isVideo = item.media_type === 'video';
@@ -98,6 +110,7 @@ const ChatMessageItem = React.memo(({ item, userId, isRTL, handleDownloadMedia }
               source={{ uri: mediaUrl }} 
               style={{ width: 220, height: 220, borderRadius: 8, marginBottom: item.content ? 8 : 0 }} 
               resizeMode="cover" 
+              onLoad={onMediaLoad}
             />
           )
         ) : null}
@@ -112,6 +125,8 @@ export default function TripDashboardScreen() {
   const tripId = id as string;
   const { t, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const appState = useRef(AppState.currentState);
   
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string>('');
@@ -140,6 +155,11 @@ export default function TripDashboardScreen() {
   const [weather, setWeather] = useState<{ temp: number; icon: string; desc: string } | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const chatScrollRef = useRef<FlatList>(null);
+  const activeTabRef = useRef(activeTab);
+  const userIdRef = useRef(userId);
+
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
 
   // Helper to find name from trip attendees
   const getSenderName = (senderId: string) => {
@@ -185,6 +205,37 @@ export default function TripDashboardScreen() {
     load();
   }, [tripId]);
 
+  // Handle unread dot clear when switching to chat tab
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setHasUnreadMessages(false);
+    }
+  }, [activeTab]);
+
+  // Notifications and AppState Listener
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      appState.current = nextAppState;
+    });
+
+    const requestNotifications = async () => {
+      try {
+        if (!Notifications.getPermissionsAsync) return;
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          await Notifications.requestPermissionsAsync?.();
+        }
+      } catch (e) {
+        console.warn('Notifications permission error:', e);
+      }
+    };
+    requestNotifications();
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   // Real-time Subscriptions
   useEffect(() => {
     if (!tripId) return;
@@ -197,9 +248,32 @@ export default function TripDashboardScreen() {
       .subscribe();
 
     const chatSub = supabase
-      .channel(`public:trip_messages:trip_id=eq.${tripId}`)
+      .channel(`chat:${tripId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages', filter: `trip_id=eq.${tripId}` }, (payload) => {
         const newMsg = formatNewMessage(payload.new);
+        
+        // Show red dot and notification if user is not on chat tab OR app is in background
+        if (activeTabRef.current !== 'chat' || appState.current !== 'active') {
+          if (newMsg.sender_id !== userIdRef.current) {
+            setHasUnreadMessages(true);
+            
+            try {
+              if (Notifications.scheduleNotificationAsync) {
+                Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: `🚙 ${trip?.title || 'JeepTrip'}`,
+                    body: `${newMsg.users?.full_name || 'User'}: ${newMsg.content || (newMsg.media_type === 'image' ? '📷 Photo' : '🎥 Video')}`,
+                    data: { tripId },
+                  },
+                  trigger: null,
+                }).catch(e => console.warn('Schedule notification fail:', e));
+              }
+            } catch (e) {
+              console.warn('Notifications error:', e);
+            }
+          }
+        }
+
         setMessages(prev => {
           if (prev.some(m => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
@@ -211,9 +285,23 @@ export default function TripDashboardScreen() {
       supabase.removeChannel(logisticsSub);
       supabase.removeChannel(chatSub);
     };
-  }, [tripId, trip?.trip_attendees]);
+  }, [tripId, trip]);
 
+  const scrollToBottom = (animated = true) => {
+    if (activeTab === 'chat' && messages.length > 0) {
+      chatScrollRef.current?.scrollToEnd({ animated });
+    }
+  };
 
+  // Scroll to bottom when messages update OR entering chat tab
+  useEffect(() => {
+    if (activeTab === 'chat' && messages.length > 0) {
+      // Multiple attempts to ensure it works across layout cycles
+      scrollToBottom(false); // Instant
+      const timer = setTimeout(() => scrollToBottom(true), 150); // Animated
+      return () => clearTimeout(timer);
+    }
+  }, [messages, activeTab]);
 
   useEffect(() => {
     if (trip?.lat && trip?.lng) {
@@ -413,10 +501,42 @@ export default function TripDashboardScreen() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() && !uploadingImage) return;
     const msgText = newMessage.trim();
+    const tempId = Date.now().toString();
+    
+    // 1. Optimistic Update
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      trip_id: tripId,
+      sender_id: userId,
+      content: msgText,
+      media_url: null,
+      media_type: null,
+      image_url: null,
+      created_at: new Date().toISOString(),
+      users: { full_name: 'You' }
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
     setNewMessage('');
+    
     try {
-      await sendMessage(tripId, msgText);
-    } catch (e) { console.error(e); }
+      const sentMsg = await sendMessage(tripId, msgText);
+      // 2. Replace optimistic message with real message from DB, 
+      // but only if it's not already added by the Realtime listener
+      setMessages(prev => {
+        const alreadyExists = prev.some(m => m.id === sentMsg.id);
+        if (alreadyExists) {
+          return prev.filter(m => m.id !== tempId);
+        }
+        return prev.map(m => m.id === tempId ? sentMsg : m);
+      });
+    } catch (e: any) { 
+      console.error(e);
+      Alert.alert(isRTL ? 'שגיאה בשליחה' : 'Send Error', isRTL ? 'לא ניתן לשלוח את ההודעה. נסה שוב.' : 'Could not send message. Please try again.');
+      // 3. Revert optimistic update and restore text
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setNewMessage(msgText);
+    }
   };
 
   const handlePickMedia = async (type: 'image' | 'video') => {
@@ -437,7 +557,11 @@ export default function TripDashboardScreen() {
         setUploadingImage(true);
         const uploadedUrl = await uploadMediaFile(result.assets[0].uri, type);
         
-        await sendMessage(tripId, '', uploadedUrl, type);
+        const sentMsg = await sendMessage(tripId, '', uploadedUrl, type);
+        setMessages(prev => {
+          if (prev.some(m => m.id === sentMsg.id)) return prev;
+          return [...prev, sentMsg];
+        });
       } catch (e: any) {
         Alert.alert('Error', e.message);
       } finally {
@@ -751,6 +875,7 @@ export default function TripDashboardScreen() {
     return (
       <View style={{ flex: 1 }}>
         <FlatList
+          ref={chatScrollRef}
           data={messages}
           keyExtractor={m => m.id}
           renderItem={({ item }) => (
@@ -759,14 +884,18 @@ export default function TripDashboardScreen() {
               userId={userId} 
               isRTL={isRTL} 
               handleDownloadMedia={handleDownloadMedia} 
+              onMediaLoad={() => scrollToBottom(true)}
             />
           )}
           contentContainerStyle={styles.chatList}
           initialNumToRender={10}
           maxToRenderPerBatch={10}
-          onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() => {
+            if (activeTab === 'chat' && messages.length > 0) {
+              chatScrollRef.current?.scrollToEnd({ animated: true });
+            }
+          }}
           onLayout={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
-          ref={chatScrollRef}
           windowSize={10}
           removeClippedSubviews={Platform.OS === 'android'}
         />
@@ -823,8 +952,17 @@ export default function TripDashboardScreen() {
       <View style={styles.tabContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.tabScroll, rowStyle]}>
           {(['overview', 'navigation', 'logistics', 'chat'] as TabType[]).map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.tabItem, activeTab === tab && styles.tabItemActive]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{t(`trip_${tab}` as any)}</Text>
+            <TouchableOpacity 
+              key={tab}
+              style={[styles.tabItem, activeTab === tab && styles.tabItemActive]} 
+              onPress={() => setActiveTab(tab)}
+            >
+              <View style={styles.tabContentWithBadge}>
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                  {t(`trip_${tab}` as any)}
+                </Text>
+                {tab === 'chat' && hasUnreadMessages && <View style={styles.tabBadge} />}
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -862,6 +1000,22 @@ const styles = StyleSheet.create({
   tabScroll: { paddingHorizontal: Spacing.sm },
   tabItem: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabItemActive: { borderBottomColor: Palette.gold },
+  tabContentWithBadge: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Palette.rust,
+    borderWidth: 1.5,
+    borderColor: Palette.gold,
+  },
   tabText: { fontSize: Typography.sm, color: Palette.mud, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
   tabTextActive: { color: Palette.gold, fontWeight: '800' },
 

@@ -31,6 +31,26 @@
 .dash-tab:hover { color: var(--sand); }
 .dash-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
 
+.dash-tab-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.dash-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--rust);
+  border: 1.5px solid var(--charcoal-mid);
+  border-radius: 50%;
+  box-shadow: 0 0 5px rgba(184, 75, 42, 0.5);
+}
+
 .dash-content { flex: 1; overflow-y: auto; }
 
 /* Tab content */
