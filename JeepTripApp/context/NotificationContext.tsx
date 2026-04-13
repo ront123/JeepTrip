@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import * as Notifications from 'expo-notifications';
 import { supabase } from '@/lib/supabase';
 import { fetchMyTrips } from '@/lib/trips';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 interface NotificationContextType {
   unreadTrips: Set<string>;
@@ -28,9 +28,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [userId, setUserId] = useState<string | null>(null);
   
   const userTripIds = useRef<Set<string>>(new Set());
-  const currentUserId = useRef<string | null>(null);
   const appState = useRef(AppState.currentState);
 
+  // 1. AppState listener
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       appState.current = nextAppState;
@@ -38,109 +38,111 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => subscription.remove();
   }, []);
 
+  // 2. Auth state listener ONLY tracks userId
   useEffect(() => {
-    async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        currentUserId.current = user.id;
-        setupRealtime(user.id);
-      }
-    }
-    init();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id);
+    });
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        currentUserId.current = session.user.id;
-        setupRealtime(session.user.id);
-      } else {
-        setUserId(null);
-        currentUserId.current = null;
+      setUserId(session?.user?.id || null);
+      if (!session?.user) {
         setUnreadTrips(new Set());
         setPendingCount(0);
       }
     });
 
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
-  const setupRealtime = async (uid: string) => {
-    try {
+  // 3. Realtime listener driven by userId - Robust React Lifecycle
+  useEffect(() => {
+    if (!userId) {
       setConnectionStatus('loading');
-      
-      // 1. Fetch user trips for filtering
-      const trips = await fetchMyTrips(true);
-      userTripIds.current = new Set(trips.map(t => t.id.toLowerCase()));
+      return;
+    }
 
-      // 2. Fetch pending count if admin
-      const { data: profile } = await supabase.from('users').select('role').eq('id', uid).single();
-      if (profile?.role === 'admin') {
-        const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-        setPendingCount(count || 0);
-      }
+    let channel: any = null;
+    let isMounted = true;
 
-      // 3. Setup global channel
-      const channel = supabase.channel('mobile_global_notifications')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages' }, (payload) => {
-          const newMsg = payload.new;
-          const tripId = (newMsg.trip_id || '').toLowerCase();
+    const setup = async () => {
+      try {
+        setConnectionStatus('loading');
+        
+        // Fetch user trips for filtering
+        const trips = await fetchMyTrips(true);
+        if (!isMounted) return;
+        userTripIds.current = new Set(trips.map(t => t.id.toLowerCase()));
 
-          if (!userTripIds.current.has(tripId)) return;
-          if (newMsg.sender_id === currentUserId.current) return;
+        // Fetch pending count if admin
+        const { data: profile } = await supabase.from('users').select('role').eq('id', userId).single();
+        if (isMounted && profile?.role === 'admin') {
+          const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+          setPendingCount(count || 0);
+        }
 
-          setUnreadTrips(prev => {
-            const next = new Set(prev);
-            next.add(tripId);
-            return next;
-          });
+        if (!isMounted) return;
 
-          // Trigger local notification if not in app or foreground but not in chat
-          if (appState.current !== 'active' || true) { // For MVP, always show if it's a new message
-             const tripTitle = trips.find(t => t.id.toLowerCase() === tripId)?.title || 'JeepTrip';
-             Notifications.scheduleNotificationAsync({
-               content: {
-                 title: `🚙 ${tripTitle}`,
-                 body: newMsg.content || 'New media message',
-                 data: { tripId, type: 'chat' },
-               },
-               trigger: null,
-             });
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
-          if (profile?.role !== 'admin') return;
+        // CREATE CHANNEL - NO RE-ENTRANCY HERE
+        channel = supabase.channel(`mobile_global:${userId}`)
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trip_messages' }, (payload) => {
+            const newMsg = payload.new;
+            const tripId = (newMsg.trip_id || '').toLowerCase();
 
-          if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
-            setPendingCount(prev => prev + 1);
+            if (!userTripIds.current.has(tripId)) return;
+            if (newMsg.sender_id === userId) return;
+
+            setUnreadTrips(prev => new Set(prev).add(tripId));
+
+            // Browser/App notification logic
+            const tripTitle = trips.find(t => t.id.toLowerCase() === tripId)?.title || 'JeepTrip';
             Notifications.scheduleNotificationAsync({
-              content: { title: '🎫 New Join Request', body: `${payload.new.full_name} wants to join the crew` },
+              content: {
+                title: `🚙 ${tripTitle}`,
+                body: newMsg.content || 'New media message',
+                data: { tripId, type: 'chat' },
+              },
               trigger: null,
             });
-          } else if (payload.eventType === 'UPDATE') {
-            const oldRecord = payload.old as any;
-            if (oldRecord?.status === 'pending' && payload.new.status !== 'pending') {
-              setPendingCount(prev => Math.max(0, prev - 1));
-            } else if (oldRecord?.status !== 'pending' && payload.new.status === 'pending') {
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+            if (profile?.role !== 'admin') return;
+            if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
               setPendingCount(prev => prev + 1);
+              Notifications.scheduleNotificationAsync({
+                content: { title: '🎫 New Join Request', body: `${payload.new.full_name} wants to join the crew` },
+                trigger: null,
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              const oldRecord = payload.old as any;
+              if (oldRecord?.status === 'pending' && payload.new.status !== 'pending') {
+                setPendingCount(prev => Math.max(0, prev - 1));
+              } else if (oldRecord?.status !== 'pending' && payload.new.status === 'pending') {
+                setPendingCount(prev => prev + 1);
+              }
             }
-          }
-        })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') setConnectionStatus('connected');
-          if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
-        });
+          })
+          .subscribe((status) => {
+            if (isMounted) {
+              if (status === 'SUBSCRIBED') setConnectionStatus('connected');
+              if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
+            }
+          });
+      } catch (e) {
+        console.error('Realtime setup error:', e);
+        if (isMounted) setConnectionStatus('error');
+      }
+    };
 
-      return () => {
+    setup();
+
+    return () => {
+      isMounted = false;
+      if (channel) {
         supabase.removeChannel(channel);
-      };
-    } catch (e) {
-      console.error('Mobile notification setup error:', e);
-      setConnectionStatus('error');
-    }
-  };
+      }
+    };
+  }, [userId]);
 
   const markAsRead = (tripId: string) => {
     setUnreadTrips(prev => {
