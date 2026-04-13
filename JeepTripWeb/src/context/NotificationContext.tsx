@@ -5,6 +5,7 @@ import { fetchMyTrips } from '../lib/trips';
 
 interface NotificationContextType {
   unreadTrips: Set<string>;
+  pendingCount: number;
   markAsRead: (tripId: string) => void;
   setActiveTrip: (tripId: string | null) => void;
   setActiveTab: (tab: string) => void;
@@ -15,8 +16,9 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | null>(null);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [unreadTrips, setUnreadTrips] = useState<Set<string>>(new Set());
+  const [pendingCount, setPendingCount] = useState(0);
   const [activeTripId, _setActiveTrip] = useState<string | null>(null);
   const [activeTab, _setActiveTab] = useState<string>('overview');
   const [permission, setPermission] = useState<NotificationPermission>(
@@ -63,37 +65,44 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         const trips = await fetchMyTrips(true);
         const tripIds = trips.map(t => t.id);
-        if (tripIds.length === 0) return;
+        
+        // Initial pending count for admin
+        if (profile?.role === 'admin') {
+          const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+          setPendingCount(count || 0);
+        }
 
         channel = supabase.channel('global_notifications')
           .on('postgres_changes', { 
             event: 'INSERT', 
             schema: 'public', 
             table: 'trip_messages',
-            filter: `trip_id=in.(${tripIds.join(',')})`
+            filter: tripIds.length > 0 ? `trip_id=in.(${tripIds.join(',')})` : undefined
           }, (payload) => {
             const newMsg = payload.new;
             const tripId = newMsg.trip_id;
-
-            // Conditions for showing notification/red dot:
-            // 1. Not from current user
-            // 2. Not currently looking at this trip's chat tab
-            // 3. (Optional) Document is hidden
-            
             const isMe = newMsg.sender_id === userIdRef.current;
             const isCurrentlyViewingChat = activeTripIdRef.current === tripId && activeTabRef.current === 'chat';
             
             if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
               setUnreadTrips(prev => new Set(prev).add(tripId));
-
-              // Browser Notification
               if ('Notification' in window && Notification.permission === 'granted') {
                 const tripTitle = trips.find(t => t.id === tripId)?.title || 'JeepTrip';
-                new Notification(`🚙 ${tripTitle}`, {
-                  body: `${newMsg.content || 'New media message'}`,
-                  icon: '/jeep.svg'
-                });
+                new Notification(`🚙 ${tripTitle}`, { body: `${newMsg.content || 'New media message'}`, icon: '/jeep.svg' });
               }
+            }
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+            if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+              setPendingCount(prev => prev + 1);
+              if (profile?.role === 'admin' && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
+              }
+            } else if (payload.eventType === 'UPDATE') {
+              const oldStatus = payload.old.status;
+              const newStatus = payload.new.status;
+              if (oldStatus === 'pending' && newStatus !== 'pending') setPendingCount(prev => Math.max(0, prev - 1));
+              else if (oldStatus !== 'pending' && newStatus === 'pending') setPendingCount(prev => prev + 1);
             }
           })
           .subscribe();
@@ -110,7 +119,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   }, [user]);
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission }}>
+    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission }}>
       {children}
     </NotificationContext.Provider>
   );

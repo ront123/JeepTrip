@@ -65,7 +65,7 @@ export default function Trips() {
   const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
-  const { unreadTrips, permission, requestPermission } = useNotifications();
+  const { permission, requestPermission } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
