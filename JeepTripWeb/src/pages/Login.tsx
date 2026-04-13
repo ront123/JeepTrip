@@ -251,15 +251,14 @@ export default function Login() {
                 ? (isRTL ? 'אין לך חשבון? הירשם כאן' : "Don't have an account? Register here")
                 : (isRTL ? 'כבר יש לך חשבון? התחבר' : "Already have an account? Log in")}
             </div>
+
+            <div className="login-bottom-accent" />
           </>
         )}
       </div>
 
       {/* Footer */}
       <p className={`login-footer ${isRTL ? 'rtl' : ''}`}>{t('footer_access')}</p>
-
-      {/* Bottom accent */}
-      <div className="login-bottom-accent" />
     </div>
   );
 }
