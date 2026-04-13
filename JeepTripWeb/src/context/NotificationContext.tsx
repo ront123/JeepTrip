@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { supabase } from '../lib/supabase';
+import { fetchMyTrips } from '../lib/trips';
 
 type ConnectionStatus = 'loading' | 'connected' | 'error';
 
@@ -116,28 +117,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         addLog('Starting discovery phase...');
         
         // 1. ROBUST TRIP DISCOVERY:
-        const { data: groupData } = await supabase.from('group_members').select('group_id').eq('user_id', user!.id);
-        const groupIds = (groupData || []).map(g => g.group_id);
-        addLog(`Found ${groupIds.length} groups.`);
+        const trips = await fetchMyTrips(true);
+        const monitoredIds = (trips || []).map(t => (t.id || '').toLowerCase());
+        userTripIds.current = new Set(monitoredIds);
+        setMonitoredTripCount(monitoredIds.length);
+        addLog(`Found ${monitoredIds.length} trips via discovery.`);
 
-        if (groupIds.length === 0) {
-          userTripIds.current = new Set();
-          setMonitoredTripCount(0);
-        } else {
-          const { data: tripGroupData } = await supabase.from('trip_groups').select('trip_id, trips(title)').in('group_id', groupIds);
-          const monitoredIds = (tripGroupData || []).map(d => (d.trip_id || '').toLowerCase());
-          userTripIds.current = new Set(monitoredIds);
-          setMonitoredTripCount(monitoredIds.length);
-          addLog(`Monitoring ${monitoredIds.length} trips.`);
-
-          // Cache titles for notifications
-          (tripGroupData || []).forEach(d => {
-            if (d.trip_id) {
-              const title = (Array.isArray(d.trips) ? d.trips[0]?.title : (d.trips as any)?.title) || 'JeepTrip';
-              tripTitles.current[d.trip_id.toLowerCase()] = title;
-            }
-          });
-        }
+        // Cache titles for notifications
+        (trips || []).forEach(t => {
+          if (t.id) {
+            tripTitles.current[t.id.toLowerCase()] = t.title || 'JeepTrip';
+          }
+        });
         
         // 2. Initial pending count for admin
         if (profile?.role === 'admin') {
