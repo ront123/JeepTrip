@@ -1,4 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Switch,
+  KeyboardAvoidingView,
+  Modal,
+  LogBox,
+  FlatList,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
