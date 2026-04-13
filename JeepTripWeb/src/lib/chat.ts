@@ -27,6 +27,13 @@ export async function sendMessage(tripId: string, content: string, mediaUrl: str
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  const { error } = await supabase.from('trip_messages').insert({
+    trip_id: tripId,
+    sender_id: user.id,
+    content,
+    media_url: mediaUrl,
+    media_type: mediaType,
+    image_url: mediaType === 'image' ? mediaUrl : null,
   });
 
   if (error) throw new Error(error.message);

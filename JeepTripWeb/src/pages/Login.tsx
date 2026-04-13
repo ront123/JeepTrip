@@ -83,9 +83,6 @@ export default function Login() {
     finally { setLoading(false); }
   };
 
-    }
-  };
-
   const handleResetRequest = async () => {
     if (!email) { setError(t('error_fill_all')); return; }
     setLoading(true); setError('');
