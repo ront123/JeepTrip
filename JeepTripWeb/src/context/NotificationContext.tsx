@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { fetchMyTrips } from '../lib/trips';
 
+type ConnectionStatus = 'loading' | 'connected' | 'error';
+
 interface NotificationContextType {
   unreadTrips: Set<string>;
   pendingCount: number;
@@ -11,6 +13,8 @@ interface NotificationContextType {
   setActiveTab: (tab: string) => void;
   permission: NotificationPermission;
   requestPermission: () => Promise<void>;
+  connectionStatus: ConnectionStatus;
+  sendTestNotification: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -21,6 +25,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [pendingCount, setPendingCount] = useState(0);
   const [activeTripId, _setActiveTrip] = useState<string | null>(null);
   const [activeTab, _setActiveTab] = useState<string>('overview');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('loading');
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' ? (window.Notification?.permission || 'default') : 'default'
   );
@@ -40,9 +45,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const markAsRead = (tripId: string) => {
     setUnreadTrips(prev => {
-      if (!prev.has(tripId)) return prev;
+      const tid = tripId.toLowerCase();
+      if (!prev.has(tid)) return prev;
       const next = new Set(prev);
-      next.delete(tripId);
+      next.delete(tid);
       return next;
     });
   };
@@ -53,12 +59,24 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setPermission(res);
   };
 
+  const sendTestNotification = () => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🛡️ JeepTrip Test', {
+        body: 'If you see this, browser notifications are working correctly!',
+        icon: '/jeep.svg'
+      });
+    } else {
+      alert('Notification permission not granted. Please click the button to enable or check browser settings.');
+    }
+  };
+
   // Global Realtime Listener
   useEffect(() => {
     if (!user) {
       setUnreadTrips(new Set());
       setPendingCount(0);
       userTripIds.current = new Set();
+      setConnectionStatus('loading');
       return;
     }
 
@@ -66,9 +84,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     async function setupListener() {
       try {
-        // Fetch trips once on mount/auth change to know which trips to listen to
+        setConnectionStatus('loading');
+        // Fetch trips once on mount/auth change
         const trips = await fetchMyTrips(true);
-        userTripIds.current = new Set(trips.map(t => t.id));
+        userTripIds.current = new Set(trips.map(t => t.id.toLowerCase()));
         
         // Initial pending count for admin
         if (profile?.role === 'admin') {
@@ -81,21 +100,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             event: 'INSERT', 
             schema: 'public', 
             table: 'trip_messages'
-            // NO FILTER here - we filter client-side for "in" logic reliability
           }, (payload) => {
             const newMsg = payload.new;
-            const tripId = newMsg.trip_id;
+            const tripId = (newMsg.trip_id || '').toLowerCase();
 
             // CLIENT-SIDE FILTERING: Check if this trip belongs to the user
             if (!userTripIds.current.has(tripId)) return;
 
             const isMe = newMsg.sender_id === userIdRef.current;
-            const isCurrentlyViewingChat = activeTripIdRef.current === tripId && activeTabRef.current === 'chat';
+            const isCurrentlyViewingChat = activeTripIdRef.current?.toLowerCase() === tripId && activeTabRef.current === 'chat';
             
             if (!isMe && (!isCurrentlyViewingChat || document.hidden)) {
               setUnreadTrips(prev => new Set(prev).add(tripId));
               if ('Notification' in window && Notification.permission === 'granted') {
-                const tripTitle = trips.find(t => t.id === tripId)?.title || 'JeepTrip';
+                const tripTitle = trips.find(t => t.id.toLowerCase() === tripId)?.title || 'JeepTrip';
                 new Notification(`🚙 ${tripTitle}`, { body: `${newMsg.content || 'New media message'}`, icon: '/jeep.svg' });
               }
             }
@@ -107,8 +125,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 new Notification('🎫 New Join Request', { body: `${payload.new.full_name} wants to join the crew`, icon: '/jeep.svg' });
               }
             } else if (payload.eventType === 'UPDATE') {
-              // old/new available? Supabase sometimes doesn't send old payload for updates unless replica identity is Full.
-              // We'll trust the payload status or we can re-fetch count to be safe.
               const newStatus = payload.new.status;
               const oldRecord = payload.old as any;
               
@@ -117,15 +133,19 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               } else if (oldRecord && oldRecord.status !== 'pending' && newStatus === 'pending') {
                 setPendingCount(prev => prev + 1);
               } else if (!oldRecord) {
-                // If old record is missing, we re-fetch to stay accurate
+                // Refetch for accuracy if old record missing
                 supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending').then(({ count }) => {
                   setPendingCount(count || 0);
                 });
               }
             }
           })
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') setConnectionStatus('connected');
+            if (status === 'CHANNEL_ERROR') setConnectionStatus('error');
+          });
       } catch (err) {
+        setConnectionStatus('error');
         console.error('Error setting up global notifications:', err);
       }
     }
@@ -135,10 +155,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [user?.id, profile?.role]); // Re-run when user or their role is determined
+  }, [user?.id, profile?.role]);
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission }}>
+    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, setActiveTrip, setActiveTab, permission, requestPermission, connectionStatus, sendTestNotification }}>
       {children}
     </NotificationContext.Provider>
   );
