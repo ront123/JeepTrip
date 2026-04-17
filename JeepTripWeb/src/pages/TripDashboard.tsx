@@ -636,7 +636,7 @@ export default function TripDashboard() {
   );
 
   return (
-    <div className="dashboard-screen">
+    <div className="dashboard-screen screen-container">
       {/* Header */}
       <div className={`screen-header ${rtl}`} style={{ paddingTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: row as any }}>

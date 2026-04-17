@@ -3,7 +3,6 @@
    ════════════════════════════════════════════ */
 
 .admin-page {
-  min-height: 100vh;
   background: linear-gradient(175deg, #0d0e0a 0%, #1a1c14 40%, #0d0e0a 100%);
   color: #f5f5f0;
   font-family: 'Outfit', -apple-system, sans-serif;

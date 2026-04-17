@@ -128,7 +128,7 @@ export default function Admin() {
   ];
 
   return (
-    <div className="admin-page">
+    <div className="admin-page screen-container">
       {/* ── Header ── */}
       <header className="admin-header">
         <div className="admin-header-content">
@@ -160,7 +160,7 @@ export default function Admin() {
       </nav>
 
       {/* ── Content ── */}
-      <main className="admin-content">
+      <main className="admin-content screen-content">
         {/* ═══ OVERVIEW TAB ═══ */}
         {activeTab === 'overview' && stats && (
           <div className="admin-overview">

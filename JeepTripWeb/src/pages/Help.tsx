@@ -11,8 +11,8 @@ export default function Help() {
   const rtl = isRTL ? 'rtl' : '';
 
   return (
-    <div className={`help-page ${rtl}`}>
-      <div className="help-hero">
+    <div className="help-page screen-container">
+      <div className={`help-hero ${rtl}`}>
         <h1>{isRTL ? 'מרכז העזרה של JeepTrip' : 'JeepTrip Help Center'}</h1>
         <p>{isRTL ? 'כל מה שצריך לדעת כדי לכבוש את השטח' : 'Everything you need to know to conquer the terrain'}</p>
       </div>
