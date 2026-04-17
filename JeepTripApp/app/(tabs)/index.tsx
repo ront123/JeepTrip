@@ -410,9 +410,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: Spacing.md,
     gap: Spacing.md,
+    overflow: 'hidden',
   },
   cardBodyRTL: { flexDirection: 'row-reverse' },
-  cardInfo: { flex: 1 },
+  cardInfo: { flex: 1, flexShrink: 1 },
   cardTitle: {
     fontSize: Typography.md,
     fontWeight: '800',
@@ -432,6 +433,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Palette.sand,
     flex: 1,
+    flexShrink: 1,
   },
 
   // Countdown

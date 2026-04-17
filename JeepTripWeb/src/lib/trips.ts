@@ -101,6 +101,15 @@ export async function createTrip(tripData: {
   
   clearTripsCache();
   await supabase.from('trip_groups').insert({ trip_id: trip.id, group_id: group.id });
+  
+  // 5. Auto-RSVP the creator
+  await supabase.from('trip_attendees').insert({
+    trip_id: trip.id,
+    user_id: user.id,
+    status: 'attending',
+    role: 'manager'
+  });
+
   return trip;
 }
 
