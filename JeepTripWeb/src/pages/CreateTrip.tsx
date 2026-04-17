@@ -4,7 +4,7 @@ import usePlacesAutocomplete, {
   getGeocode,
   getLatLng,
 } from 'use-places-autocomplete';
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { useLanguage } from '../context/LanguageContext';
 import { createTrip } from '../lib/trips';
 import './CreateTrip.css';
@@ -33,12 +33,13 @@ export default function CreateTrip() {
   const [mapsLoaded, setMapsLoaded] = useState(false);
 
   useEffect(() => {
-    const loader = new Loader({
-      apiKey: GOOGLE_MAPS_KEY,
-      version: 'weekly',
-      libraries: ['places']
+    setOptions({
+      key: GOOGLE_MAPS_KEY,
+      v: 'weekly',
     });
-    loader.load().then(() => setMapsLoaded(true)).catch(e => console.error('Error loading maps', e));
+    importLibrary('places')
+      .then(() => setMapsLoaded(true))
+      .catch((e: any) => console.error('Error loading maps', e));
   }, []);
 
   const rtl = isRTL ? 'rtl' : '';
@@ -233,7 +234,6 @@ interface PlacesAutocompleteProps {
 function PlacesAutocomplete({ placeholder, onSelect, className, isRTL, initialValue = '', mapsLoaded }: PlacesAutocompleteProps) {
   const {
     ready,
-    value,
     suggestions: { status, data },
     setValue,
     clearSuggestions,
