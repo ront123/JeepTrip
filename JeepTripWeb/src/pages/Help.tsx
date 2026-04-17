@@ -20,17 +20,16 @@ export default function Help() {
       <div className="screen-content">
         {/* Section 1: Dashboard */}
         <div className="help-section">
-          <h2><span>📊</span> {isRTL ? 'מסך הבית והמפקדה' : 'Dashboard & HQ'}</h2>
+          <h2><span>📊</span> {isRTL ? 'מסך הבית וההתארגנות' : 'Dashboard & HQ'}</h2>
           <div className="help-grid">
             <div className="help-card">
               <h3>{isRTL ? 'סקירה כללית' : 'General Overview'}</h3>
               <p>
-                {isRTL 
-                  ? 'במסך הבית תוכלו לראות את המשימות הקרובות אליהן נרשמתם, וסטטיסטיקה על הפעילות שלכם בשטח.'
+                  ? 'במסך הבית תוכלו לראות את הטיולים הקרובים אליהם נרשמתם, וסטטיסטיקה על הפעילות שלכם בשטח.'
                   : 'On the dashboard, you can see upcoming missions you joined and statistics about your off-road activity.'}
               </p>
               <div className="pro-tip">
-                <strong>💡 Pro Tip:</strong> {isRTL ? 'לחצו על כרטיס משימה כדי להיכנס לצאט ולצפות במפה.' : 'Click on a mission card to enter the chat and view the map.'}
+                <strong>💡 Pro Tip:</strong> {isRTL ? 'לחצו על כרטיס טיול כדי להיכנס לצאט ולצפות במפה.' : 'Click on a mission card to enter the chat and view the map.'}
               </div>
             </div>
             <div className="help-image-container">
@@ -41,7 +40,7 @@ export default function Help() {
 
         {/* Section 2: Creating a Trip */}
         <div className="help-section">
-          <h2><span>➕</span> {isRTL ? 'יצירת משימה חדשה' : 'Creating a New Mission'}</h2>
+          <h2><span>➕</span> {isRTL ? 'יצירת טיול חדש' : 'Creating a New Mission'}</h2>
           <div className="help-grid">
             <div className="help-image-container">
               <img src={CREATE_IMG} alt="Create Trip" className="help-image" />
@@ -54,7 +53,7 @@ export default function Help() {
                   : 'Click the plus button, enter a title, date, and location. Don\'t forget to upload a route file (GPX/KML) so friends can navigate.'}
               </p>
               <div className="pro-tip">
-                <strong>🔒 Privacy:</strong> {isRTL ? 'משימה "חבויה" לא תופיע ברשימה הציבורית אלא רק למי שתשלחו לו קישור.' : 'A "Hidden" mission won\'t appear in public lists, only for those you send a link to.'}
+                <strong>🔒 Privacy:</strong> {isRTL ? 'טיול "חסוי" לא תופיע ברשימה הציבורית אלא רק למי שתשלחו לו קישור.' : 'A "Hidden" mission won\'t appear in public lists, only for those you send a link to.'}
               </div>
             </div>
           </div>
@@ -62,13 +61,13 @@ export default function Help() {
 
         {/* Section 3: Trip Details & Chat */}
         <div className="help-section">
-          <h2><span>🗺️</span> {isRTL ? 'בתוך המשימה - המפה והצאט' : 'Inside the Mission - Map & Chat'}</h2>
+          <h2><span>🗺️</span> {isRTL ? 'בתוך הטיול - המפה והצאט' : 'Inside the Mission - Map & Chat'}</h2>
           <div className="help-grid">
             <div className="help-card">
               <h3>{isRTL ? 'תקשורת וניווט' : 'Communication & Navigation'}</h3>
               <p>
                 {isRTL
-                  ? 'כל משימה כוללת צאט ייעודי לתקשורת בזמן אמת. המפה מציגה את המסלול ונקודת המפגש שבחר המארגן.'
+                  ? 'כל טיול כולל צאט ייעודי לתקשורת בזמן אמת. המפה מציגה את המסלול ונקודת המפגש שבחר המארגן.'
                   : 'Every mission includes a dedicated chat for real-time communication. The map shows the route and the meeting point chosen by the organizer.'}
               </p>
               <div className="pro-tip">

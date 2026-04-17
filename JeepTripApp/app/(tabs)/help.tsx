@@ -42,7 +42,7 @@ export default function HelpScreen() {
         <Text style={styles.sectionLabel}>{t('help_getting_started_title')}</Text>
         <GuideCard
           icon="shield.fill"
-          title={isRTL ? 'אישור ציר' : 'Clearance'}
+          title={isRTL ? 'אישור טיול' : 'Clearance'}
           description={t('help_getting_started_desc')}
           color={Palette.gold}
         />
@@ -52,7 +52,7 @@ export default function HelpScreen() {
         <Text style={styles.sectionLabel}>{t('help_missions_title')}</Text>
         <GuideCard
           icon="map.fill"
-          title={isRTL ? 'תכנון ציר' : 'Trail Planning'}
+          title={isRTL ? 'תכנון טיול' : 'Trail Planning'}
           description={t('help_missions_desc')}
           color="#5C85BB"
         />
