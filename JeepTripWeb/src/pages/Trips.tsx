@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -18,15 +18,12 @@ function daysUntil(dateStr: string) {
   return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
 }
 
-function TripCard({ trip, isRTL }: { trip: Trip & { trip_attendees?: any[] }; isRTL: boolean }) {
+const TripCard = memo(({ trip, isRTL, hasUnread }: { trip: Trip & { trip_attendees?: any[] }; isRTL: boolean; hasUnread: boolean }) => {
   const navigate = useNavigate();
   const days = daysUntil(trip.start_date);
   const isClose = days <= 7;
   const attending = (trip.trip_attendees || []).filter((a: any) => a.status === 'attending').length;
   const maybe = (trip.trip_attendees || []).filter((a: any) => a.status === 'maybe').length;
-
-  const { unreadTrips } = useNotifications();
-  const hasUnread = unreadTrips.has(trip.id);
 
   return (
     <div className="trip-card slide-up" onClick={() => navigate(`/trips/${trip.id}`)}>
@@ -59,13 +56,13 @@ function TripCard({ trip, isRTL }: { trip: Trip & { trip_attendees?: any[] }; is
       )}
     </div>
   );
-}
+});
 
 export default function Trips() {
   const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
-  const { permission, requestPermission } = useNotifications();
+  const { permission, requestPermission, unreadTrips } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -157,7 +154,10 @@ export default function Trips() {
           </div>
         ) : (
           <div className="trips-list">
-            {trips.map(trip => <TripCard key={trip.id} trip={trip as any} isRTL={isRTL} />)}
+            {trips.map(trip => {
+              const hasUnread = unreadTrips.has(trip.id);
+              return <TripCard key={trip.id} trip={trip as any} isRTL={isRTL} hasUnread={hasUnread} />;
+            })}
           </div>
         )}
       </div>
