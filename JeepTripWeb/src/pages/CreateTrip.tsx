@@ -31,6 +31,7 @@ export default function CreateTrip() {
   const [startLng, setStartLng] = useState('');
   const [isHidden, setIsHidden] = useState(false);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [mapsError, setMapsError] = useState(false);
 
   useEffect(() => {
     setOptions({
@@ -39,7 +40,10 @@ export default function CreateTrip() {
     });
     importLibrary('places')
       .then(() => setMapsLoaded(true))
-      .catch((e: any) => console.error('Error loading maps', e));
+      .catch((e: any) => {
+        console.error('Error loading maps', e);
+        setMapsError(true);
+      });
   }, []);
 
   const rtl = isRTL ? 'rtl' : '';
@@ -108,37 +112,51 @@ export default function CreateTrip() {
           {/* Destination Search */}
           <div className="form-group">
             <label className={`form-label ${rtl}`}>{isRTL ? 'בחירת יעד להגעה (Google Maps)' : 'Destination / Area'}</label>
-            <PlacesAutocomplete
-              placeholder={isRTL ? 'חפש מקום...' : 'Search for a place...'}
-              onSelect={(val, coords) => {
-                setLocation(val);
-                if (coords) {
-                  setLat(coords.lat.toString());
-                  setLng(coords.lng.toString());
-                }
-              }}
-              className={`input ${rtl}`}
-              isRTL={isRTL}
-              initialValue={location}
-              mapsLoaded={mapsLoaded}
-            />
+            {mapsLoaded ? (
+              <PlacesAutocomplete
+                placeholder={isRTL ? 'חפש מקום...' : 'Search for a place...'}
+                onSelect={(val, coords) => {
+                  setLocation(val);
+                  if (coords) {
+                    setLat(coords.lat.toString());
+                    setLng(coords.lng.toString());
+                  }
+                }}
+                className={`input ${rtl}`}
+                isRTL={isRTL}
+                initialValue={location}
+              />
+            ) : (
+              <input 
+                className={`input ${rtl}`} 
+                placeholder={mapsError ? (isRTL ? 'שגיאה בטעינת מפות' : 'Error loading maps') : (isRTL ? 'טוען מפות...' : 'Loading maps...')} 
+                disabled 
+              />
+            )}
           </div>
 
           {/* Start Point Search */}
           <div className="form-group">
             <label className={`form-label ${rtl}`}>{isRTL ? 'בחירת נקודת התחלה' : 'Search Start Point'}</label>
-            <PlacesAutocomplete
-              placeholder={isRTL ? 'חפש נקודת מפגש...' : 'Search for meeting point...'}
-              onSelect={(_, coords) => {
-                if (coords) {
-                  setStartLat(coords.lat.toString());
-                  setStartLng(coords.lng.toString());
-                }
-              }}
-              className={`input ${rtl}`}
-              isRTL={isRTL}
-              mapsLoaded={mapsLoaded}
-            />
+            {mapsLoaded ? (
+              <PlacesAutocomplete
+                placeholder={isRTL ? 'חפש נקודת מפגש...' : 'Search for meeting point...'}
+                onSelect={(_, coords) => {
+                  if (coords) {
+                    setStartLat(coords.lat.toString());
+                    setStartLng(coords.lng.toString());
+                  }
+                }}
+                className={`input ${rtl}`}
+                isRTL={isRTL}
+              />
+            ) : (
+              <input 
+                className={`input ${rtl}`} 
+                placeholder={mapsError ? (isRTL ? 'שגיאה בטעינת מפות' : 'Error loading maps') : (isRTL ? 'טוען מפות...' : 'Loading maps...')} 
+                disabled 
+              />
+            )}
           </div>
 
           {/* Dates */}
@@ -228,10 +246,9 @@ interface PlacesAutocompleteProps {
   className: string;
   isRTL: boolean;
   initialValue?: string;
-  mapsLoaded: boolean;
 }
 
-function PlacesAutocomplete({ placeholder, onSelect, className, isRTL, initialValue = '', mapsLoaded }: PlacesAutocompleteProps) {
+function PlacesAutocomplete({ placeholder, onSelect, className, isRTL, initialValue = '' }: PlacesAutocompleteProps) {
   const {
     ready,
     suggestions: { status, data },
@@ -282,7 +299,6 @@ function PlacesAutocomplete({ placeholder, onSelect, className, isRTL, initialVa
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [clearSuggestions]);
 
-  if (!mapsLoaded) return <input className={className} placeholder="Loading maps..." disabled />;
 
   return (
     <div className="autocomplete-container" ref={containerRef}>
