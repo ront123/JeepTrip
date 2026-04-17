@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { fetchTrip, upsertRSVP } from '../lib/trips';
+import { fetchTrip, upsertRSVP, updateTrip, deleteTrip, archiveTrip, toggleTripManager } from '../lib/trips';
 import { fetchLogistics, addLogisticsItem, deleteLogisticsItem, updateLogisticsItem, fetchLogisticsTemplates, saveLogisticsTemplate, applyLogisticsTemplate } from '../lib/logistics';
 import type { LogisticsItem, LogisticsTemplate } from '../lib/logistics';
 import { fetchMessages, sendMessage, uploadMediaFile } from '../lib/chat';
@@ -53,6 +53,29 @@ export default function TripDashboard() {
   const userIdRef = useRef(userId);
   const tripTitleRef = useRef(trip?.title);
   const userNameMap = useRef<Record<string, string>>({});
+
+  // Settings Modal State
+  const [showSettings, setShowSettings] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editLoc, setEditLoc] = useState('');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [editMax, setEditMax] = useState('');
+  const [editTime, setEditTime] = useState('');
+  const [editOffroad, setEditOffroad] = useState('');
+  const [updating, setUpdating] = useState(false);
+
+  useEffect(() => {
+    if (trip && showSettings) {
+      setEditTitle(trip.title || '');
+      setEditLoc(trip.location_area || '');
+      setEditStart(trip.start_date ? new Date(trip.start_date).toISOString().split('T')[0] : '');
+      setEditEnd(trip.end_date ? new Date(trip.end_date).toISOString().split('T')[0] : '');
+      setEditMax(trip.max_participants?.toString() || '');
+      setEditTime(trip.meeting_time || '');
+      setEditOffroad(trip.off_road_url || '');
+    }
+  }, [trip, showSettings]);
 
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
@@ -280,6 +303,52 @@ export default function TripDashboard() {
     window.open(`https://waze.com/ul?ll=${lat},${lng}&navigate=yes`, '_blank');
   };
 
+  const handleUpdateTrip = async () => {
+    if (!tripId || !editTitle.trim()) return;
+    setUpdating(true);
+    try {
+      await updateTrip(tripId, {
+        title: editTitle.trim(),
+        location_area: editLoc.trim(),
+        start_date: new Date(editStart).toISOString(),
+        end_date: new Date(editEnd).toISOString(),
+        max_participants: editMax ? parseInt(editMax, 10) : null,
+        meeting_time: editTime.trim() || null,
+        off_road_url: editOffroad.trim() || null,
+      });
+      await loadTrip();
+      setShowSettings(false);
+    } catch (e: any) { alert(e.message); }
+    finally { setUpdating(false); }
+  };
+
+  const handleDeleteTrip = async () => {
+    if (!tripId) return;
+    if (!window.confirm(isRTL ? 'האם אתה בטוח שברצונך למחוק את המסע לצמיתות?' : 'Are you sure you want to permanently delete this trip?')) return;
+    try {
+      await deleteTrip(tripId);
+      navigate('/trips');
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const handleArchiveTrip = async () => {
+    if (!tripId) return;
+    if (!window.confirm(isRTL ? 'לסגור את המסע? הצאט יהפוך לקריאה בלבד.' : 'Archive trip? Chat will become read-only.')) return;
+    try {
+      await archiveTrip(tripId);
+      await loadTrip();
+      setShowSettings(false);
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const handleToggleManager = async (targetId: string, currentRole: string) => {
+    if (!tripId) return;
+    try {
+      await toggleTripManager(tripId, targetId, currentRole !== 'manager');
+      await loadTrip();
+    } catch (e: any) { alert(e.message); }
+  };
+
   const addToGoogleCalendar = () => {
     if (!trip) return;
     const start = new Date(trip.start_date).toISOString().replace(/-|:|\.\d+/g, '');
@@ -314,7 +383,10 @@ export default function TripDashboard() {
 
       {canManage && (
         <div className="dash-actions" style={{ flexDirection: row as any }}>
-          {inviteToken && (
+          <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowSettings(true)}>
+            ⚙️ {isRTL ? 'הגדרות' : 'Settings'}
+          </button>
+          {!trip.is_archived && inviteToken && (
             <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => setShowInvite(true)}>
               🔗 {isRTL ? 'שלח הזמנה' : 'Invite Link'}
             </button>
@@ -613,6 +685,98 @@ export default function TripDashboard() {
               {inviteCopied ? '✅ Copied!' : (isRTL ? 'העתק קישור' : 'Copy Link')}
             </button>
             <button className="btn btn-outline" onClick={() => setShowInvite(false)}>{t('btn_cancel')}</button>
+          </div>
+        </div>
+      )}
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal-box settings-modal" onClick={e => e.stopPropagation()}>
+            <p className="modal-title">{isRTL ? 'הגדרות מסע' : 'Trip Settings'}</p>
+            
+            <div className="settings-scroll-area">
+              <div className="form-group">
+                <label className="form-label">{isRTL ? 'שם המסע' : 'Trip Title'}</label>
+                <input className="input" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">{isRTL ? 'מיקום/אזור' : 'Location'}</label>
+                <input className="input" value={editLoc} onChange={e => setEditLoc(e.target.value)} />
+              </div>
+
+              <div className="form-row" style={{ flexDirection: row as any }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">{isRTL ? 'תאריך יציאה' : 'Start Date'}</label>
+                  <input type="date" className="input" value={editStart} onChange={e => setEditStart(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label className="form-label">{isRTL ? 'תאריך חזרה' : 'End Date'}</label>
+                  <input type="date" className="input" value={editEnd} onChange={e => setEditEnd(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{isRTL ? 'שעת מפגש' : 'Meeting Time'}</label>
+                <input type="time" className="input" value={editTime} onChange={e => setEditTime(e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{isRTL ? 'לינק ל-OffRoad' : 'OffRoad Link'}</label>
+                <input className="input" value={editOffroad} onChange={e => setEditOffroad(e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">{isRTL ? 'מכסת משתתפים' : 'Participant Limit'}</label>
+                <input type="number" className="input" value={editMax} onChange={e => setEditMax(e.target.value)} placeholder="Unlimited" />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: 20 }}>
+                <button className="btn btn-outline" onClick={() => setShowSettings(false)}>{t('btn_cancel')}</button>
+                <button className="btn btn-gold" onClick={handleUpdateTrip} disabled={updating}>
+                  {updating ? <span className="spinner spinner-sm" /> : (isRTL ? 'שמור שינויים' : 'Save Changes')}
+                </button>
+              </div>
+
+              {isCreator && (
+                <div className="danger-zone">
+                  <p className="section-title" style={{ color: 'var(--rust-light)', fontSize: 14 }}>Danger Zone</p>
+                  <div className="dash-actions" style={{ gap: 10, marginTop: 10 }}>
+                    {!trip.is_archived && (
+                      <button className="btn btn-outline" style={{ borderColor: 'var(--gold)', color: 'var(--gold)', fontSize: 12 }} onClick={handleArchiveTrip}>
+                        🏁 {isRTL ? 'סגור מסע (ארכיון)' : 'Archive Trip'}
+                      </button>
+                    )}
+                    <button className="btn btn-outline" style={{ borderColor: 'var(--rust)', color: 'var(--rust-light)', fontSize: 12 }} onClick={handleDeleteTrip}>
+                      🗑️ {isRTL ? 'מחק מסע לצמיתות' : 'Delete Permanently'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="divider" style={{ margin: '20px 0' }} />
+              <p className="section-title">👥 {isRTL ? 'ניהול הרשאות' : 'Manage Permissions'}</p>
+              <div className="attendee-list" style={{ marginTop: 10 }}>
+                {trip.trip_attendees?.map((a: any) => {
+                  if (a.user_id === trip.created_by) return null;
+                  const isMngr = a.role === 'manager';
+                  return (
+                    <div key={a.user_id} className="attendee-row" style={{ flexDirection: row as any, padding: '10px 0' }}>
+                      <span style={{ color: 'var(--cream)', fontSize: 14 }}>{a.users?.full_name}</span>
+                      {isCreator && (
+                        <button 
+                          className={`badge ${isMngr ? 'manager' : 'attendee'}`}
+                          style={{ marginLeft: isRTL ? 0 : 'auto', marginRight: isRTL ? 'auto' : 0 }}
+                          onClick={() => handleToggleManager(a.user_id, a.role)}
+                        >
+                          {isMngr ? (isRTL ? 'מנהל' : 'MANAGER') : (isRTL ? 'משתתף' : 'ATTENDEE')}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       )}

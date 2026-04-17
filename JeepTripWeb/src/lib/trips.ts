@@ -124,3 +124,18 @@ export async function deleteTrip(tripId: string) {
   if (error) throw new Error(error.message);
   clearTripsCache();
 }
+
+export async function archiveTrip(tripId: string) {
+  const { error } = await supabase.from('trips').update({ is_archived: true }).eq('id', tripId);
+  if (error) throw new Error(error.message);
+  clearTripsCache();
+}
+
+export async function toggleTripManager(tripId: string, userId: string, setAsManager: boolean) {
+  const { error } = await supabase
+    .from('trip_attendees')
+    .update({ role: setAsManager ? 'manager' : 'attendee' })
+    .eq('trip_id', tripId)
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}

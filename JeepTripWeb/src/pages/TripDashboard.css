@@ -188,3 +188,61 @@
   overflow-wrap: anywhere;
   display: block;
 }
+
+/* Settings Modal */
+.settings-modal {
+  max-width: 500px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-scroll-area {
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-top: 20px;
+  flex: 1;
+}
+
+.settings-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.settings-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--charcoal-light);
+  border-radius: 2px;
+}
+
+.danger-zone {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--charcoal-light);
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.badge.manager {
+  background: var(--gold);
+  color: var(--charcoal);
+}
+
+.badge.attendee {
+  background: var(--charcoal-light);
+  color: var(--cream);
+}
+
+.form-group .form-label {
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 6px;
+  display: block;
+  font-weight: 700;
+}
