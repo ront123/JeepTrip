@@ -12,6 +12,7 @@ interface NotificationContextType {
   connectionStatus: 'loading' | 'connected' | 'error';
   isMuted: boolean;
   setIsMuted: (muted: boolean) => void;
+  isAdmin: boolean;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -32,6 +33,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [connectionStatus, setConnectionStatus] = useState<'loading' | 'connected' | 'error'>('loading');
   const [userId, setUserId] = useState<string | null>(null);
   const [isMuted, _setIsMuted] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const userTripIds = useRef<Set<string>>(new Set());
   const appState = useRef(AppState.currentState);
@@ -70,6 +72,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!session?.user) {
         setUnreadTrips(new Set());
         setPendingCount(0);
+        setIsAdmin(false);
       }
     });
 
@@ -96,8 +99,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         userTripIds.current = new Set(trips.map(t => t.id.toLowerCase()));
 
         // Fetch pending count if admin
-        const { data: profile } = await supabase.from('users').select('role').eq('id', userId).single();
-        if (isMounted && profile?.role === 'admin') {
+        const { data: profile } = await supabase.from('users').select('role, email').eq('id', userId).single();
+        const isSystemAdmin = profile?.role === 'admin' || profile?.email === 'ront123@gmail.com';
+        
+        if (isMounted) setIsAdmin(isSystemAdmin);
+
+        if (isMounted && isSystemAdmin) {
           const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('status', 'pending');
           setPendingCount(count || 0);
         }
@@ -176,7 +183,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, connectionStatus, isMuted, setIsMuted }}>
+    <NotificationContext.Provider value={{ unreadTrips, pendingCount, markAsRead, connectionStatus, isMuted, setIsMuted, isAdmin }}>
       {children}
     </NotificationContext.Provider>
   );

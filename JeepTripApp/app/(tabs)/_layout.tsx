@@ -13,7 +13,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'dark'];
   const { t } = useLanguage();
-  const { unreadTrips, pendingCount } = useNotifications();
+  const { unreadTrips, pendingCount, isAdmin } = useNotifications();
 
   const hasUnreadMessages = unreadTrips.size > 0;
 
@@ -71,15 +71,17 @@ export default function TabLayout() {
         }}
       />
 
-      <Tabs.Screen
-        name="admin"
-        options={{
-          title: t('tab_admin'),
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
-          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: Palette.gold },
-        }}
-      />
+      {isAdmin && (
+        <Tabs.Screen
+          name="admin"
+          options={{
+            title: t('tab_admin'),
+            tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
+            tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+            tabBarBadgeStyle: { backgroundColor: Palette.gold },
+          }}
+        />
+      )}
     </Tabs>
   );
 }
