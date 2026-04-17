@@ -6,9 +6,9 @@ import './Navbar.css';
 
 export function Navbar() {
   const { t, isRTL } = useLanguage();
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const { pendingCount } = useNotifications();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = user?.email === 'ront123@gmail.com';
 
   return (
     <nav className={`tab-bar ${isRTL ? 'rtl' : ''}`}>

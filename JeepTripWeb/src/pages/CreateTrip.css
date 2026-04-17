@@ -114,3 +114,58 @@
 .create-trip-form input[type="time"] {
   color-scheme: dark;
 }
+
+/* Autocomplete styling */
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--charcoal-mid);
+  border: 1px solid var(--charcoal-light);
+  border-radius: var(--r-md);
+  z-index: 1000;
+  list-style: none;
+  padding: 8px 0;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.autocomplete-dropdown.rtl {
+  text-align: right;
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.autocomplete-item:hover {
+  background: var(--charcoal-light);
+}
+
+.suggestion-main {
+  color: var(--cream);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.suggestion-secondary {
+  color: var(--sand);
+  font-size: 11px;
+}
+
+/* Ensure autocomplete takes container styles */
+.autocomplete-container input {
+  width: 100%;
+}

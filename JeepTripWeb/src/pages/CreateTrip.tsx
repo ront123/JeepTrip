@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import usePlacesAutocomplete, {
+  getGeocode,
+  getLatLng,
+} from 'use-places-autocomplete';
+import { Loader } from '@googlemaps/js-api-loader';
 import { useLanguage } from '../context/LanguageContext';
 import { createTrip } from '../lib/trips';
 import './CreateTrip.css';
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export default function CreateTrip() {
   const navigate = useNavigate();
@@ -23,6 +30,16 @@ export default function CreateTrip() {
   const [startLat, setStartLat] = useState('');
   const [startLng, setStartLng] = useState('');
   const [isHidden, setIsHidden] = useState(false);
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loader = new Loader({
+      apiKey: GOOGLE_MAPS_KEY,
+      version: 'weekly',
+      libraries: ['places']
+    });
+    loader.load().then(() => setMapsLoaded(true)).catch(e => console.error('Error loading maps', e));
+  }, []);
 
   const rtl = isRTL ? 'rtl' : '';
   const row = isRTL ? 'row-reverse' : 'row';
@@ -87,15 +104,39 @@ export default function CreateTrip() {
             />
           </div>
 
-          {/* Location */}
+          {/* Destination Search */}
           <div className="form-group">
-            <label className={`form-label ${rtl}`}>{isRTL ? 'יעד / אזור' : 'Destination / Area'}</label>
-            <input
+            <label className={`form-label ${rtl}`}>{isRTL ? 'בחירת יעד להגעה (Google Maps)' : 'Destination / Area'}</label>
+            <PlacesAutocomplete
+              placeholder={isRTL ? 'חפש מקום...' : 'Search for a place...'}
+              onSelect={(val, coords) => {
+                setLocation(val);
+                if (coords) {
+                  setLat(coords.lat.toString());
+                  setLng(coords.lng.toString());
+                }
+              }}
               className={`input ${rtl}`}
-              placeholder={isRTL ? 'למשל: מכתש רמון' : 'e.g. Ramon Crater'}
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              required
+              isRTL={isRTL}
+              initialValue={location}
+              mapsLoaded={mapsLoaded}
+            />
+          </div>
+
+          {/* Start Point Search */}
+          <div className="form-group">
+            <label className={`form-label ${rtl}`}>{isRTL ? 'בחירת נקודת התחלה' : 'Search Start Point'}</label>
+            <PlacesAutocomplete
+              placeholder={isRTL ? 'חפש נקודת מפגש...' : 'Search for meeting point...'}
+              onSelect={(_, coords) => {
+                if (coords) {
+                  setStartLat(coords.lat.toString());
+                  setStartLng(coords.lng.toString());
+                }
+              }}
+              className={`input ${rtl}`}
+              isRTL={isRTL}
+              mapsLoaded={mapsLoaded}
             />
           </div>
 
@@ -133,48 +174,6 @@ export default function CreateTrip() {
             />
           </div>
 
-          {/* Coordinates */}
-          <div className="form-row" style={{ flexDirection: row as any }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className={`form-label ${rtl}`}>{isRTL ? 'קו רוחב (יעד)' : 'Destination Lat'}</label>
-              <input
-                className={`input ${rtl}`}
-                placeholder="31.0461"
-                value={lat}
-                onChange={e => setLat(e.target.value)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className={`form-label ${rtl}`}>{isRTL ? 'קו אורך (יעד)' : 'Destination Lng'}</label>
-              <input
-                className={`input ${rtl}`}
-                placeholder="34.8516"
-                value={lng}
-                onChange={e => setLng(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="form-row" style={{ flexDirection: row as any }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className={`form-label ${rtl}`}>{isRTL ? 'קו רוחב (התחלה)' : 'Start Lat'}</label>
-              <input
-                className={`input ${rtl}`}
-                placeholder="31.2530"
-                value={startLat}
-                onChange={e => setStartLat(e.target.value)}
-              />
-            </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className={`form-label ${rtl}`}>{isRTL ? 'קו אורך (התחלה)' : 'Start Lng'}</label>
-              <input
-                className={`input ${rtl}`}
-                placeholder="34.7915"
-                value={startLng}
-                onChange={e => setStartLng(e.target.value)}
-              />
-            </div>
-          </div>
 
           {/* Max Participants */}
           <div className="form-group">
@@ -218,6 +217,99 @@ export default function CreateTrip() {
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+interface PlacesAutocompleteProps {
+  placeholder: string;
+  onSelect: (address: string, coords: { lat: number; lng: number } | null) => void;
+  className: string;
+  isRTL: boolean;
+  initialValue?: string;
+  mapsLoaded: boolean;
+}
+
+function PlacesAutocomplete({ placeholder, onSelect, className, isRTL, initialValue = '', mapsLoaded }: PlacesAutocompleteProps) {
+  const {
+    ready,
+    value,
+    suggestions: { status, data },
+    setValue,
+    clearSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      componentRestrictions: { country: 'il' },
+    },
+    debounce: 300,
+  });
+
+  const [displayValue, setDisplayValue] = useState(initialValue);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (initialValue) setDisplayValue(initialValue);
+  }, [initialValue]);
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDisplayValue(e.target.value);
+    setValue(e.target.value);
+  };
+
+  const handleSelect = ({ description }: any) => () => {
+    setDisplayValue(description);
+    setValue(description, false);
+    clearSuggestions();
+
+    getGeocode({ address: description })
+      .then((results) => getLatLng(results[0]))
+      .then(({ lat, lng }) => {
+        onSelect(description, { lat, lng });
+      })
+      .catch((error) => {
+        console.error('Error: ', error);
+        onSelect(description, null);
+      });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        clearSuggestions();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [clearSuggestions]);
+
+  if (!mapsLoaded) return <input className={className} placeholder="Loading maps..." disabled />;
+
+  return (
+    <div className="autocomplete-container" ref={containerRef}>
+      <input
+        value={displayValue}
+        onChange={handleInput}
+        disabled={!ready}
+        placeholder={placeholder}
+        className={className}
+      />
+      {status === 'OK' && (
+        <ul className={`autocomplete-dropdown ${isRTL ? 'rtl' : ''}`}>
+          {data.map((suggestion) => {
+            const {
+              place_id,
+              structured_formatting: { main_text, secondary_text },
+            } = suggestion;
+
+            return (
+              <li key={place_id} onClick={handleSelect(suggestion)} className="autocomplete-item">
+                <span className="suggestion-main">{main_text}</span>{' '}
+                <small className="suggestion-secondary">{secondary_text}</small>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
