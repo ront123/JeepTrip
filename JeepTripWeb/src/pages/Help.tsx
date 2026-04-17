@@ -25,6 +25,7 @@ export default function Help() {
             <div className="help-card">
               <h3>{isRTL ? 'סקירה כללית' : 'General Overview'}</h3>
               <p>
+                {isRTL 
                   ? 'במסך הבית תוכלו לראות את הטיולים הקרובים אליהם נרשמתם, וסטטיסטיקה על הפעילות שלכם בשטח.'
                   : 'On the dashboard, you can see upcoming missions you joined and statistics about your off-road activity.'}
               </p>
