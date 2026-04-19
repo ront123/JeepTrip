@@ -71,17 +71,16 @@ export default function TabLayout() {
         }}
       />
 
-      {isAdmin && (
-        <Tabs.Screen
-          name="admin"
-          options={{
-            title: t('tab_admin'),
-            tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
-            tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-            tabBarBadgeStyle: { backgroundColor: Palette.gold },
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="admin"
+        options={{
+          href: isAdmin ? '/admin' : null,
+          title: t('tab_admin'),
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
+          tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: Palette.gold },
+        }}
+      />
     </Tabs>
   );
 }
