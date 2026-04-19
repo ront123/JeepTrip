@@ -1,0 +1,22 @@
+diff --git a/node_modules/expo-constants/scripts/get-app-config-android.gradle b/node_modules/expo-constants/scripts/get-app-config-android.gradle
+index 6dc16fc..658409d 100644
+--- a/node_modules/expo-constants/scripts/get-app-config-android.gradle
++++ b/node_modules/expo-constants/scripts/get-app-config-android.gradle
+@@ -3,13 +3,15 @@
+ import org.apache.tools.ant.taskdefs.condition.Os
+ 
+ 
++def nodeBinary = System.getProperty("NODE_BINARY") ?: "node"
++
+ def expoConstantsDir = project.providers.exec {
+   workingDir(projectDir)
+-  commandLine("node", "-e", "console.log(require('path').dirname(require.resolve('expo-constants/package.json')));")
++  commandLine(nodeBinary, "-e", "console.log(require('path').dirname(require.resolve('expo-constants/package.json')));")
+ }.standardOutput.asText.get().trim()
+ 
+ def config = project.hasProperty("react") ? project.react : [];
+-def nodeExecutableAndArgs = config.nodeExecutableAndArgs ?: ["node"]
++def nodeExecutableAndArgs = config.nodeExecutableAndArgs ?: [nodeBinary]
+ 
+ afterEvaluate {
+   def projectRoot = file("${rootProject.projectDir}")

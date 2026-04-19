@@ -1,0 +1,116 @@
+diff --git a/node_modules/react-native-reanimated/android/build.gradle b/node_modules/react-native-reanimated/android/build.gradle
+index 6b73a69..a58f7cc 100644
+--- a/node_modules/react-native-reanimated/android/build.gradle
++++ b/node_modules/react-native-reanimated/android/build.gradle
+@@ -27,10 +27,11 @@ def resolveReactNativeDirectory() {
+     }
+ 
+     // Fallback to node resolver for custom directory structures like monorepos.
++    def nodeExecutable = System.getProperty("NODE_BINARY", "node")
+     def reactNativePackage = file(
+         providers.exec {
+             workingDir(rootDir)
+-            commandLine("node", "--print", "require.resolve('react-native/package.json')")
++            commandLine(nodeExecutable, "--print", "require.resolve('react-native/package.json')")
+         }.standardOutput.asText.get().trim()
+     )
+     if (reactNativePackage.exists()) {
+@@ -49,10 +50,11 @@ def resolveReactNativeWorkletsDirectory() {
+     }
+ 
+     // Fallback to node resolver for custom directory structures like monorepos.
++    def nodeExecutable = System.getProperty("NODE_BINARY", "node")
+     def reactNativeWorkletsPackage = file(
+         providers.exec {
+             workingDir(rootDir)
+-            commandLine("node", "--print", "require.resolve('react-native-worklets/package.json')")
++            commandLine(nodeExecutable, "--print", "require.resolve('react-native-worklets/package.json')")
+         }.standardOutput.asText.get().trim()
+     )
+     if (reactNativeWorkletsPackage.exists()) {
+@@ -157,7 +159,7 @@ apply plugin: "maven-publish"
+ apply plugin: "de.undercouch.download"
+ 
+ android {
+-    compileSdkVersion safeExtGet("compileSdkVersion", 34)
++    compileSdkVersion safeExtGet("compileSdkVersion", 35)
+ 
+     namespace "com.swmansion.reanimated"
+ 
+@@ -182,7 +184,7 @@ android {
+ 
+     defaultConfig {
+         minSdkVersion safeExtGet("minSdkVersion", 23)
+-        targetSdkVersion safeExtGet("targetSdkVersion", 34)
++        targetSdkVersion safeExtGet("targetSdkVersion", 35)
+         versionCode 1
+         versionName REANIMATED_VERSION
+ 
+@@ -278,7 +280,7 @@ android {
+ 
+ def validateReactNativeVersionResult = providers.exec {
+     workingDir(projectDir.path)
+-    commandLine("node", "./../scripts/validate-react-native-version.js", REACT_NATIVE_VERSION.toString())
++    commandLine(System.getProperty("NODE_BINARY", "node"), "./../scripts/validate-react-native-version.js", REACT_NATIVE_VERSION.toString())
+     ignoreExitValue = true
+ }
+ 
+@@ -303,7 +305,7 @@ preBuild.dependsOn(assertNewArchitectureEnabledTask)
+ 
+ def validateWorkletsBuildResult = providers.exec {
+     workingDir(projectDir.path)
+-    commandLine("node", "./../scripts/validate-worklets-build.js")
++    commandLine(System.getProperty("NODE_BINARY", "node"), "./../scripts/validate-worklets-build.js")
+     ignoreExitValue = true
+ }
+ 
+diff --git a/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/debug b/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/debug
+new file mode 100644
+index 0000000..6485a07
+--- /dev/null
++++ b/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/debug
+@@ -0,0 +1,18 @@
++{
++  "installationFolder": "/Users/rontoledo/Projects/JeepTrip/JeepTripApp/node_modules/react-native-reanimated/android/build/intermediates/prefab_package/debug/prefab",
++  "gradlePath": ":react-native-reanimated",
++  "packageInfo": {
++    "packageName": "react-native-reanimated",
++    "packageVersion": "4.1.7",
++    "packageSchemaVersion": 2,
++    "packageDependencies": [],
++    "modules": [
++      {
++        "moduleName": "reanimated",
++        "moduleHeaders": "/Users/rontoledo/Projects/JeepTrip/JeepTripApp/node_modules/react-native-reanimated/android/build/prefab-headers/reanimated",
++        "moduleExportLibraries": [],
++        "abis": []
++      }
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/release b/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/release
+new file mode 100644
+index 0000000..14f1e8b
+--- /dev/null
++++ b/node_modules/react-native-reanimated/android/build/intermediates/prefab_package_header_only/prefab_publication.json/release
+@@ -0,0 +1,18 @@
++{
++  "installationFolder": "/Users/rontoledo/Projects/JeepTrip/JeepTripApp/node_modules/react-native-reanimated/android/build/intermediates/prefab_package/release/prefab",
++  "gradlePath": ":react-native-reanimated",
++  "packageInfo": {
++    "packageName": "react-native-reanimated",
++    "packageVersion": "4.1.7",
++    "packageSchemaVersion": 2,
++    "packageDependencies": [],
++    "modules": [
++      {
++        "moduleName": "reanimated",
++        "moduleHeaders": "/Users/rontoledo/Projects/JeepTrip/JeepTripApp/node_modules/react-native-reanimated/android/build/prefab-headers/reanimated",
++        "moduleExportLibraries": [],
++        "abis": []
++      }
++    ]
++  }
++}
+\ No newline at end of file

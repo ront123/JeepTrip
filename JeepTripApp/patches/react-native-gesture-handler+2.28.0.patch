@@ -1,0 +1,35 @@
+diff --git a/node_modules/react-native-gesture-handler/android/build.gradle b/node_modules/react-native-gesture-handler/android/build.gradle
+index ac149a0..55f4ec8 100644
+--- a/node_modules/react-native-gesture-handler/android/build.gradle
++++ b/node_modules/react-native-gesture-handler/android/build.gradle
+@@ -39,10 +39,11 @@ def resolveReactNativeDirectory() {
+     }
+ 
+     // Fallback to node resolver for custom directory structures like monorepos.
++    def nodeExecutable = System.getProperty("NODE_BINARY", "node")
+     def reactNativePackage = file(
+         providers.exec {
+             workingDir(rootDir)
+-            commandLine("node", "--print", "require.resolve('react-native/package.json')")
++            commandLine(nodeExecutable, "--print", "require.resolve('react-native/package.json')")
+         }.standardOutput.asText.get().trim()
+     )
+ 
+@@ -127,7 +128,7 @@ repositories {
+ }
+ 
+ android {
+-    compileSdkVersion safeExtGet("compileSdkVersion", 33)
++    compileSdkVersion safeExtGet("compileSdkVersion", 35)
+ 
+     namespace = "com.swmansion.gesturehandler"
+     buildFeatures {
+@@ -146,7 +147,7 @@ android {
+ 
+     defaultConfig {
+         minSdkVersion safeExtGet('minSdkVersion', 24)
+-        targetSdkVersion safeExtGet('targetSdkVersion', 33)
++        targetSdkVersion safeExtGet('targetSdkVersion', 35)
+         buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
+         buildConfigField "int", "REACT_NATIVE_MINOR_VERSION", REACT_NATIVE_MINOR_VERSION.toString()
+ 

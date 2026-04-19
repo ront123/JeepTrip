@@ -1,0 +1,27 @@
+diff --git a/node_modules/react-native-screens/android/build.gradle b/node_modules/react-native-screens/android/build.gradle
+index 114be81..e276775 100644
+--- a/node_modules/react-native-screens/android/build.gradle
++++ b/node_modules/react-native-screens/android/build.gradle
+@@ -3,8 +3,8 @@ import groovy.json.JsonSlurper
+ 
+ buildscript {
+     ext {
+-        rnsDefaultTargetSdkVersion = 34
+-        rnsDefaultCompileSdkVersion = 34
++        rnsDefaultTargetSdkVersion = 35
++        rnsDefaultCompileSdkVersion = 35
+         rnsDefaultMinSdkVersion = 21
+         rnsDefaultKotlinVersion = '1.8.0'
+     }
+@@ -61,9 +61,10 @@ def resolveReactNativeDirectory() {
+     }
+ 
+     // We're in non standard setup, e.g. monorepo - try to use node resolver to locate the react-native package.
++    def nodeExecutable = System.getProperty("NODE_BINARY", "node")
+     String maybeRnPackagePath = providers.exec {
+         workingDir(rootDir)
+-        commandLine("node", "--print", "require.resolve('react-native/package.json')")
++        commandLine(nodeExecutable, "--print", "require.resolve('react-native/package.json')")
+     }.standardOutput.asText.get().trim()
+ 
+     File nodeResolverRnDirFile = null
