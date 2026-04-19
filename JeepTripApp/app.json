@@ -29,6 +29,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       [
         "expo-splash-screen",
         {
@@ -47,6 +48,14 @@
         "expo-calendar",
         {
           "calendarPermission": "JeepTrip needs permission to save trip dates to your calendar."
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "JeepTrip needs access to your photos to share mission moments.",
+          "savePhotosPermission": "JeepTrip needs permission to save mission photos to your gallery."
         }
       ],
       "@react-native-community/datetimepicker",
