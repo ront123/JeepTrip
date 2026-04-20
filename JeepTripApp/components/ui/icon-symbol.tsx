@@ -21,6 +21,17 @@ const MAPPING = {
   'person.2.fill': 'group',
   'person.fill': 'person',
   'gearshape.fill': 'settings',
+  'questionmark.circle.fill': 'help',
+  'shield.fill': 'shield',
+  'checkmark.shield.fill': 'verified-user',
+  'map.fill': 'map',
+  'lock.fill': 'lock',
+  'message.fill': 'message',
+  'envelope.fill': 'email',
+  'arrow.clockwise': 'refresh',
+  'person.3.fill': 'groups',
+  'clock.fill': 'history',
+  'chevron.left': 'chevron-left',
 } as IconMapping;
 
 /**
